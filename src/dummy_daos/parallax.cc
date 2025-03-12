@@ -187,12 +187,12 @@ par_value lsm_get(par_handle handle, const char* key) {
     parallax_key.size       = strlen(key) + 1;
     parallax_key.data       = key;
 
-    struct par_value value = {.val_size = 0, .val_buffer = NULL};
-
+    struct par_value value = {.val_buffer_size = 32168U, .val_size = 0, .val_buffer = (char*)malloc(32168U)};
     const char* error_msg_get = NULL;
     par_get(handle, &parallax_key, &value, &error_msg_get);
     if (error_msg_get) {
         LSM_DEBUG("Parallax get failed reason: %s", error_msg_get);
+        free(value.val_buffer);
         value.val_buffer = NULL;
         value.val_size = 0;
         return value;

@@ -1,6 +1,6 @@
 ---
 type: local
-engine: toc
+engine: parallax
 schema: @PROJECT_BINARY_DIR@/etc/fdb/schema
 spaces:
 - handler: Default

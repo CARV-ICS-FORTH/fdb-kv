@@ -15,7 +15,7 @@
 namespace fdb5
 {
 
-	class ParallaxCatalogueReader : public ParallaxCatalogue, public CatalogueReader {
+class ParallaxCatalogueReader : public ParallaxCatalogue, public CatalogueReader {
     public:
 	ParallaxCatalogueReader(const Key &key, const fdb5::Config &config);
 	ParallaxCatalogueReader(const eckit::URI &uri, const fdb5::Config &config);

@@ -110,12 +110,12 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 		kv.k.data = keyStr.c_str();
 
 		kv.v.val_buffer_size = 32168U;
-        kv.v.val_size = 0;
-        kv.v.val_buffer = (char *)malloc(kv.v.val_buffer_size);
+       		kv.v.val_size = 0;
+        	kv.v.val_buffer = (char *)malloc(kv.v.val_buffer_size);
         
-        if (!kv.v.val_buffer) {
-            throw eckit::Exception("Memory allocation failed for index retrieval.");
-        }
+        	if (!kv.v.val_buffer) {
+            		throw eckit::Exception("Memory allocation failed for index retrieval.");
+        	}
 
 		par_get(db_handle, &kv.k, &kv.v, &error_msg);
 
@@ -123,23 +123,21 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 
 		if(kv.v.val_size <= 0){
 			std::string nstr = indexes_[key].location().uri().asString();
-            if (nstr.length() > 512) {
-                free(kv.v.val_buffer);
-                throw eckit::Exception("Serialized index location exceeded configured maximum index location length.");
-            }
+			if (nstr.length() > 512) {
+				free(kv.v.val_buffer);
+				throw eckit::Exception("Serialized index location exceeded configured maximum index location length.");
+			}
 
-            kv.v.val_size = nstr.length() + 1;
-            strncpy(kv.v.val_buffer, nstr.c_str(), kv.v.val_buffer_size - 1);
-            kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
-
-            par_put(db_handle, &kv, &error_msg);
+	    		kv.v.val_size = nstr.length() + 1;
+		        strncpy(kv.v.val_buffer, nstr.c_str(), kv.v.val_buffer_size - 1);
+		    	kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
+	
+		    	par_put(db_handle, &kv, &error_msg);
 		}
-
 		free(kv.v.val_buffer);
-    }
-
-    current_ = indexes_[key];
-    return true;
+    	}
+   	current_ = indexes_[key];
+    	return true;
 }
 
 void ParallaxCatalogueWriter::deselectIndex()

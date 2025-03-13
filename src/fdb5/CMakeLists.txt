@@ -425,6 +425,23 @@ else()
     set( UUID_INCLUDE_DIRS "" )
 endif()
 
+
+if( HAVE_PARALLAXFDB )
+    list( APPEND fdb5_srcs
+        parallax/parallax_handle.cpp
+        parallax/parallax_handle.h
+        parallax/ParallaxCatalogue.cpp
+        parallax/ParallaxCatalogue.h
+        parallax/ParallaxCatalogueReader.cpp
+        parallax/ParallaxCatalogueReader.h
+        parallax/ParallaxCatalogueWriter.cpp
+        parallax/ParallaxCatalogueWriter.h
+        parallax/ParallaxIndex.cpp
+        parallax/ParallaxIndex.h
+        parallax/ParallaxIndexLocation.h
+    )
+endif()
+
 ecbuild_add_library(
 
     TARGET  fdb5

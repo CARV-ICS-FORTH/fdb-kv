@@ -8,9 +8,9 @@
  * does it submit to any jurisdiction.
  */
 
+#include "fdb5/parallax/ParallaxCatalogueWriter.h"
 #include "fdb5/LibFdb5.h"
 #include "fdb5/parallax/ParallaxCatalogue.h"
-#include "fdb5/parallax/ParallaxCatalogueWriter.h"
 #include "fdb5/parallax/ParallaxIndex.h"
 #include "parallax_handle.h"
 #include <fstream>
@@ -37,7 +37,7 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 	}
 
 	dbKey_kv.v.val_size = dbKeyStr.size() + 1;
-	dbKey_kv.v.val_buffer = (char*)dbKeyStr.c_str();
+	dbKey_kv.v.val_buffer = (char *)dbKeyStr.c_str();
 
 	par_put(db_handle, &dbKey_kv, &error_msg);
 	if (error_msg) {
@@ -100,44 +100,48 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 {
 	currentIndexKey_ = key;
 
-	if (indexes_.find(key) == indexes_.end()) {
-		par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
-		const char *error_msg = nullptr;
+	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
+	const char *error_msg = nullptr;
 
-		par_key_value kv;
-		std::string keyStr = key.valuesToString();
-		kv.k.size = keyStr.size() + 1;
-		kv.k.data = keyStr.c_str();
+	par_key_value kv;
+	std::string keyStr = key.valuesToString();
+	kv.k.size = keyStr.size() + 1;
+	kv.k.data = keyStr.c_str();
 
-		kv.v.val_buffer_size = 32168U;
-       		kv.v.val_size = 0;
-        	kv.v.val_buffer = (char *)malloc(kv.v.val_buffer_size);
-        
-        	if (!kv.v.val_buffer) {
-            		throw eckit::Exception("Memory allocation failed for index retrieval.");
-        	}
+	kv.v.val_buffer_size = 32168U;
+	kv.v.val_size = 0;
+	kv.v.val_buffer = (char *)malloc(kv.v.val_buffer_size);
 
-		par_get(db_handle, &kv.k, &kv.v, &error_msg);
+	if (!kv.v.val_buffer) {
+		throw eckit::Exception("Memory allocation failed for index retrieval.");
+	}
 
-		indexes_[key] = Index(new ParallaxIndex(key));
+	par_get(db_handle, &kv.k, &kv.v, &error_msg);
 
-		if(kv.v.val_size <= 0){
-			std::string nstr = indexes_[key].location().uri().asString();
-			if (nstr.length() > 512) {
-				free(kv.v.val_buffer);
-				throw eckit::Exception("Serialized index location exceeded configured maximum index location length.");
-			}
+	error_msg = nullptr;
+	if (kv.v.val_size <= 0) {
+		std::string placeholderValue = "parallax_index_placeholder";
 
-	    		kv.v.val_size = nstr.length() + 1;
-		        strncpy(kv.v.val_buffer, nstr.c_str(), kv.v.val_buffer_size - 1);
-		    	kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
-	
-		    	par_put(db_handle, &kv, &error_msg);
+		if (placeholderValue.length() > kv.v.val_buffer_size) {
+			free(kv.v.val_buffer);
+			throw eckit::Exception("Index placeholder exceeded maximum length.");
 		}
-		free(kv.v.val_buffer);
-    	}
-   	current_ = indexes_[key];
-    	return true;
+
+		kv.v.val_size = placeholderValue.length() + 1;
+		strncpy(kv.v.val_buffer, placeholderValue.c_str(), kv.v.val_buffer_size - 1);
+		kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
+
+		par_put(db_handle, &kv, &error_msg);
+
+		if (error_msg) {
+			free(kv.v.val_buffer);
+			throw eckit::Exception(std::string("Failed to insert placeholder index: ") + error_msg);
+		}
+	}
+
+	indexes_[key] = Index(new ParallaxIndex(key));
+	current_ = indexes_[key];
+	return true;
 }
 
 void ParallaxCatalogueWriter::deselectIndex()
@@ -169,87 +173,89 @@ const Index &ParallaxCatalogueWriter::currentIndex()
 
 void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocation> fieldLocation)
 {
-    if (current_.null()) {
-        ASSERT(!currentIndexKey_.empty());
-        selectIndex(currentIndexKey_);
-    }
+	if (current_.null()) {
+		ASSERT(!currentIndexKey_.empty());
+		selectIndex(currentIndexKey_);
+	}
 
-    Field field(std::move(fieldLocation), currentIndex().timestamp());
+	Field field(std::move(fieldLocation), currentIndex().timestamp());
 
-    const_cast<fdb5::IndexAxis &>(current_.axes()).sort();
+	const_cast<fdb5::IndexAxis &>(current_.axes()).sort();
 
-    std::vector<std::string> axesToExpand;
-    std::vector<std::string> valuesToAdd;
-    std::string axisNames = "";
-    std::string sep = "";
+	std::vector<std::string> axesToExpand;
+	std::vector<std::string> valuesToAdd;
+	std::string axisNames = "";
+	std::string sep = "";
 
-    for (Key::const_iterator i = key.begin(); i != key.end(); ++i) {
-        const std::string &keyword = i->first;
-        std::string value = key.canonicalValue(keyword);
-        if (value.empty()) continue;
+	for (Key::const_iterator i = key.begin(); i != key.end(); ++i) {
+		const std::string &keyword = i->first;
+		std::string value = key.canonicalValue(keyword);
+		if (value.empty())
+			continue;
 
-        axisNames += sep + keyword;
-        sep = ",";
+		axisNames += sep + keyword;
+		sep = ",";
 
-        const auto &axis_set = current_.axes().values(keyword);
-        if (!axis_set.contains(value)) {
-            axesToExpand.push_back(keyword);
-            valuesToAdd.push_back(value);
-        }
-    }
+		const auto &axis_set = current_.axes().values(keyword);
+		if (!axis_set.contains(value)) {
+			axesToExpand.push_back(keyword);
+			valuesToAdd.push_back(value);
+		}
+	}
 
-    current_.put(key, field);
+	current_.put(key, field);
 
-    par_handle db_handle = par_get_db("par_db");
-    if (!db_handle) {
-        std::cerr << "Failed to open Parallax database." << std::endl;
-        _exit(EXIT_FAILURE);
-    }
+	par_handle db_handle = par_get_db("par_db");
+	if (!db_handle) {
+		std::cerr << "Failed to open Parallax database." << std::endl;
+		_exit(EXIT_FAILURE);
+	}
 
-    if (firstIndexWrite_) {
-        par_key_value kv{};
-        const char *error_message = nullptr;
+	if (firstIndexWrite_) {
+		par_key_value kv{};
+		const char *error_message = nullptr;
 
-        std::string indexKeyWithAxes = "axes";
+		std::string indexKeyWithAxes = "axes";
 
-        kv.k.data = indexKeyWithAxes.c_str();
-        kv.k.size = indexKeyWithAxes.size();
+		kv.k.data = indexKeyWithAxes.c_str();
+		kv.k.size = indexKeyWithAxes.size();
 
-        kv.v.val_buffer = axisNames.data();
-        kv.v.val_size = axisNames.length();
+		kv.v.val_buffer = axisNames.data();
+		kv.v.val_size = axisNames.length();
 
-        par_put(db_handle, &kv, &error_message);
-        if (error_message) {
-            std::cerr << "Parallax put failed: " << error_message << std::endl;
-            _exit(EXIT_FAILURE);
-        }
+		par_put(db_handle, &kv, &error_message);
+		if (error_message) {
+			std::cerr << "Parallax put failed: " << error_message << std::endl;
+			_exit(EXIT_FAILURE);
+		}
 
-        firstIndexWrite_ = false;
-    }
+		firstIndexWrite_ = false;
+	}
 
-    if (axesToExpand.empty()) return;
+	if (axesToExpand.empty())
+		return;
 
-    while (!axesToExpand.empty()) {
-        par_key_value kv2{};
-        const char *error_message2 = nullptr;
+	while (!axesToExpand.empty()) {
+		par_key_value kv2{};
+		const char *error_message2 = nullptr;
 
-        std::string axisKey = axesToExpand.back();
+		std::string axisKey = axesToExpand.back();
 
-        kv2.k.data = axisKey.c_str();
-        kv2.k.size = axisKey.size();
+		kv2.k.data = axisKey.c_str();
+		kv2.k.size = axisKey.size();
 
-        kv2.v.val_buffer = (char*)valuesToAdd.back().c_str();
-        kv2.v.val_size = valuesToAdd.back().size();
+		kv2.v.val_buffer = (char *)valuesToAdd.back().c_str();
+		kv2.v.val_size = valuesToAdd.back().size();
 
-        par_put(db_handle, &kv2, &error_message2);
-        if (error_message2) {
-            std::cerr << "Parallax put failed: " << error_message2 << std::endl;
-            _exit(EXIT_FAILURE);
-        }
+		par_put(db_handle, &kv2, &error_message2);
+		if (error_message2) {
+			std::cerr << "Parallax put failed: " << error_message2 << std::endl;
+			_exit(EXIT_FAILURE);
+		}
 
-        axesToExpand.pop_back();
-        valuesToAdd.pop_back();
-    }
+		axesToExpand.pop_back();
+		valuesToAdd.pop_back();
+	}
 }
 
 void ParallaxCatalogueWriter::flush()

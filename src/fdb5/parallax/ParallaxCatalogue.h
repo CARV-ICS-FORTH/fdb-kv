@@ -26,7 +26,6 @@ class ParallaxCatalogue : public Catalogue {
 			  const fdb5::Config &config)
 		: Catalogue(Key(), controlIdentifiers, config)
 	{
-		throw std::logic_error("constructor not implemented");
 	}
 
 	~ParallaxCatalogue() override;
@@ -37,6 +36,11 @@ class ParallaxCatalogue : public Catalogue {
 	std::vector<Index> indexes(bool sorted = false) const override;
 	const Schema &schema() const override;
 	eckit::URI uri() const override;
+
+	const Key &indexKey() const override
+	{
+		return currentIndexKey_;
+	}
 
 	void checkUID() const override
 	{

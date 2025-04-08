@@ -28,5 +28,4 @@ using eckit::PathName;
 		_exit(EXIT_FAILURE);                                                                                  \
 	} while (0);
 
-
 par_handle par_get_db(const std::string &db_name);

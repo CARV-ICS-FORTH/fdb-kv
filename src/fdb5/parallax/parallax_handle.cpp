@@ -4,7 +4,7 @@ std::unordered_map<std::string, par_handle> par_handles;
 
 par_handle par_get_db(const std::string &db_name)
 {
-	std::cout << "File: " << __FILE__ << ", Line: " << __LINE__ << ", Function: " << __func__ << std::endl;
+	// std::cout << "File: " << __FILE__ << ", Line: " << __LINE__ << ", Function: " << __func__ << std::endl;
 
 	// Check if the database is already opened
 	auto it = par_handles.find(db_name);

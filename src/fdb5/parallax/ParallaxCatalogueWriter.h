@@ -42,16 +42,15 @@ class ParallaxCatalogueWriter : public ParallaxCatalogue, public CatalogueWriter
     protected:
 	virtual bool selectIndex(const Key &key) override;
 	virtual void deselectIndex() override;
+	void flush() override;
+	void clean() override;
+	void close() override;
+	void archive(const Key &key, std::unique_ptr<FieldLocation> fieldLocation) override;
 
 	bool open() override
 	{
 		NOTIMP;
 	}
-	void flush() override;
-	void clean() override;
-	void close() override;
-
-	void archive(const Key &key, std::unique_ptr<FieldLocation> fieldLocation) override;
 
 	virtual void print(std::ostream &out) const override
 	{
@@ -61,14 +60,10 @@ class ParallaxCatalogueWriter : public ParallaxCatalogue, public CatalogueWriter
     private:
 	void closeIndexes();
 
-    private:
 	typedef std::map<Key, Index> IndexStore;
-
-    private:
+	
 	IndexStore indexes_;
-
 	Index current_;
-
 	bool firstIndexWrite_;
 };
 

@@ -44,8 +44,6 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 		throw eckit::Exception("Failed to insert dbKey: " + std::string(error_msg));
 	}
 
-	std::cout << "Inserted Key: " << dbKey_kv.k.data << " | Value: " << dbKey_kv.v.val_buffer << std::endl;
-
 	std::string path = config.schemaPath();
 
 	std::stringstream schema_buffer;
@@ -100,47 +98,50 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 {
 	currentIndexKey_ = key;
 
-	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
-	const char *error_msg = nullptr;
+	if (indexes_.find(key) == indexes_.end()) {
+		par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
+		const char *error_msg = nullptr;
 
-	par_key_value kv;
-	std::string keyStr = key.valuesToString();
-	kv.k.size = keyStr.size() + 1;
-	kv.k.data = keyStr.c_str();
+		par_key_value kv;
+		std::string keyStr = key.valuesToString();
+		kv.k.size = keyStr.size() + 1;
+		kv.k.data = keyStr.c_str();
 
-	kv.v.val_buffer_size = 32168U;
-	kv.v.val_size = 0;
-	kv.v.val_buffer = (char *)malloc(kv.v.val_buffer_size);
+		kv.v.val_buffer_size = 32168U;
+		kv.v.val_size = 0;
+		kv.v.val_buffer = (char *)malloc(kv.v.val_buffer_size);
 
-	if (!kv.v.val_buffer) {
-		throw eckit::Exception("Memory allocation failed for index retrieval.");
-	}
-
-	par_get(db_handle, &kv.k, &kv.v, &error_msg);
-
-	error_msg = nullptr;
-	if (kv.v.val_size <= 0) {
-		std::string placeholderValue = "parallax_index_placeholder";
-
-		if (placeholderValue.length() > kv.v.val_buffer_size) {
-			free(kv.v.val_buffer);
-			throw eckit::Exception("Index placeholder exceeded maximum length.");
+		if (!kv.v.val_buffer) {
+			throw eckit::Exception("Memory allocation failed for index retrieval.");
 		}
 
-		kv.v.val_size = placeholderValue.length() + 1;
-		strncpy(kv.v.val_buffer, placeholderValue.c_str(), kv.v.val_buffer_size - 1);
-		kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
+		par_get(db_handle, &kv.k, &kv.v, &error_msg);
 
-		par_put(db_handle, &kv, &error_msg);
+		error_msg = nullptr;
+		if (kv.v.val_size <= 0) {
+			std::string placeholderValue = "parallax_index_placeholder";
 
-		if (error_msg) {
-			free(kv.v.val_buffer);
-			throw eckit::Exception(std::string("Failed to insert placeholder index: ") + error_msg);
+			if (placeholderValue.length() > kv.v.val_buffer_size) {
+				free(kv.v.val_buffer);
+				throw eckit::Exception("Index placeholder exceeded maximum length.");
+			}
+
+			kv.v.val_size = placeholderValue.length() + 1;
+			strncpy(kv.v.val_buffer, placeholderValue.c_str(), kv.v.val_buffer_size - 1);
+			kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
+
+			par_put(db_handle, &kv, &error_msg);
+
+			if (error_msg) {
+				free(kv.v.val_buffer);
+				throw eckit::Exception(std::string("Failed to insert placeholder index: ") + error_msg);
+			}
 		}
 	}
 
 	indexes_[key] = Index(new ParallaxIndex(key));
 	current_ = indexes_[key];
+	firstIndexWrite_ = true;
 	return true;
 }
 
@@ -236,20 +237,46 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		return;
 
 	while (!axesToExpand.empty()) {
+		const std::string &axisKey = axesToExpand.back();
+		const std::string &newValue = valuesToAdd.back();
+
 		par_key_value kv2{};
 		const char *error_message2 = nullptr;
 
-		std::string axisKey = axesToExpand.back();
+		par_key existing_key{ .size = static_cast<uint32_t>(axisKey.size()), .data = axisKey.c_str() };
+
+		std::vector<char> value_buf(1024);
+		par_value existing_value{ .val_buffer_size = static_cast<uint32_t>(value_buf.size()),
+					  .val_size = 0,
+					  .val_buffer = value_buf.data() };
+
+		par_get(db_handle, &existing_key, &existing_value, &error_message2);
+
+		std::string updatedValueStr;
+		if (!error_message2 && existing_value.val_size > 0) {
+			std::string oldValue(value_buf.begin(), value_buf.begin() + existing_value.val_size);
+
+			std::vector<std::string> tokens;
+			eckit::Tokenizer t(",");
+			t(oldValue, tokens);
+
+			if (std::find(tokens.begin(), tokens.end(), newValue) == tokens.end()) {
+				oldValue += "," + newValue;
+			}
+			updatedValueStr = oldValue;
+		} else {
+			updatedValueStr = newValue;
+		}
 
 		kv2.k.data = axisKey.c_str();
 		kv2.k.size = axisKey.size();
 
-		kv2.v.val_buffer = (char *)valuesToAdd.back().c_str();
-		kv2.v.val_size = valuesToAdd.back().size();
+		kv2.v.val_buffer = (char *)updatedValueStr.c_str();
+		kv2.v.val_size = updatedValueStr.size();
 
+		error_message2 = nullptr;
 		par_put(db_handle, &kv2, &error_message2);
 		if (error_message2) {
-			std::cerr << "Parallax put failed: " << error_message2 << std::endl;
 			_exit(EXIT_FAILURE);
 		}
 
@@ -266,7 +293,7 @@ void ParallaxCatalogueWriter::flush()
 
 void ParallaxCatalogueWriter::closeIndexes()
 {
-	indexes_.clear();
+	indexes_.clear(); // all indexes instances destroyed
 }
 
 static fdb5::CatalogueBuilder<fdb5::ParallaxCatalogueWriter> builder("parallax.writer");

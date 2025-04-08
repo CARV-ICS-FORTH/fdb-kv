@@ -26,18 +26,17 @@ class ParallaxIndex : public fdb5::IndexBase {
 	{
 		NOTIMP;
 	}
+
 	void funlock() const override
 	{
 		NOTIMP;
 	}
 
     private:
-
 	const IndexLocation &location() const override
 	{
 		return location_;
 	}
-	const std::vector<eckit::URI> dataURIs() const override;
 
 	bool dirty() const override
 	{
@@ -47,11 +46,13 @@ class ParallaxIndex : public fdb5::IndexBase {
 	void open() override
 	{
 		NOTIMP;
-	};
+	}
+
 	void close() override
 	{
 		NOTIMP;
 	}
+
 	void reopen() override
 	{
 		NOTIMP;
@@ -62,22 +63,21 @@ class ParallaxIndex : public fdb5::IndexBase {
 		NOTIMP;
 	}
 
-	bool get(const Key &key, const Key &remapKey, Field &field) const override;
-	void add(const Key &key, const Field &field) override;
 	void flush() override
 	{
 		NOTIMP;
 	}
+
 	void encode(eckit::Stream &s, const int version) const override
 	{
 		NOTIMP;
 	}
-	void entries(EntryVisitor &visitor) const override;
 
 	void print(std::ostream &out) const override
 	{
 		NOTIMP;
 	}
+
 	void dump(std::ostream &out, const char *indent, bool simple = false, bool dumpFields = false) const override
 	{
 		NOTIMP;
@@ -88,7 +88,11 @@ class ParallaxIndex : public fdb5::IndexBase {
 		NOTIMP;
 	}
 
+	void add(const Key &key, const Field &field) override;
+	bool get(const Key &key, const Key &remapKey, Field &field) const override;
 	void updateAxes();
+	void entries(EntryVisitor &visitor) const override;
+	const std::vector<eckit::URI> dataURIs() const override;
 
     private:
 	ParallaxIndexLocation location_;

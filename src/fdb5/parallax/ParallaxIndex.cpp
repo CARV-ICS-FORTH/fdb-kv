@@ -9,34 +9,167 @@
  */
 
 #include "fdb5/parallax/ParallaxIndex.h"
-#include "parallax_handle.h"
-#include <limits.h>
-
 #include "eckit/io/MemoryHandle.h"
 #include "eckit/serialisation/HandleStream.h"
+#include "eckit/serialisation/MemoryStream.h"
+#include "parallax_handle.h"
+#include <limits.h>
 
 namespace fdb5
 {
 ParallaxIndex::ParallaxIndex(const fdb5::Key &key)
-	: IndexBase(key, "parallaxKeyValue"),
-	location_("parallaxKeyValue")
+	: IndexBase(key, "parallaxKeyValue")
+	, location_("parallaxKeyValue")
 {
+	key_ = key;
 }
 
 ParallaxIndex::ParallaxIndex(const Key &key, bool readAxes)
 	: IndexBase(key, "parallaxKeyValue")
 	, location_("parallaxKeyValue")
 {
+	if (readAxes) {
+		updateAxes();
+	}
 }
 
 void ParallaxIndex::updateAxes()
 {
-	throw std::logic_error("updateAxes Not implemented");
+	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
+	if (!db_handle) {
+		throw eckit::Exception("Failed to open Parallax metadata database.");
+	}
+
+	std::string keyStr = "axes";
+	struct par_key axes_key {
+		.size = static_cast<uint32_t>(keyStr.size()), .data = keyStr.c_str()
+	};
+
+	std::vector<char> axes_data(512);
+	struct par_value axes_value = { .val_buffer_size = static_cast<uint32_t>(axes_data.size()),
+					.val_size = 0,
+					.val_buffer = axes_data.data() };
+
+	const char *error_msg = nullptr;
+	par_get(db_handle, &axes_key, &axes_value, &error_msg);
+
+	std::vector<std::string> axis_names;
+	if (axes_value.val_size > 0 && !error_msg) {
+		std::string axes_str(axes_data.begin(), axes_data.begin() + axes_value.val_size);
+		eckit::Tokenizer parse(",");
+		parse(axes_str, axis_names);
+	}
+
+	std::string indexKeyStr = key_.valuesToString();
+
+	for (const auto &name : axis_names) {
+		std::string axisKeyStr = name;
+		struct par_key axis_key = { .size = static_cast<uint32_t>(axisKeyStr.size()),
+					    .data = axisKeyStr.c_str() };
+
+		std::vector<char> axis_values_buf(32 * 1024);
+		struct par_value axis_value = { .val_buffer_size = static_cast<uint32_t>(axis_values_buf.size()),
+						.val_size = 0,
+						.val_buffer = axis_values_buf.data() };
+
+		par_get(db_handle, &axis_key, &axis_value, &error_msg);
+
+		std::vector<std::string> values;
+		if (axis_value.val_size > 0 && !error_msg) {
+			std::string val_str(axis_values_buf.begin(), axis_values_buf.begin() + axis_value.val_size);
+			eckit::Tokenizer parse(",");
+			parse(val_str, values);
+		}
+
+		axes_.insert(name, values);
+	}
+	axes_.sort();
 }
 
 bool ParallaxIndex::get(const Key &key, const Key &remapKey, Field &field) const
 {
-	throw std::logic_error("get Not implemented");
+	std::string query = key.valuesToString();
+
+	int field_loc_max_len = 512;
+	std::vector<char> loc_data(field_loc_max_len);
+
+	struct par_key pkey;
+	pkey.size = query.size() + 1;
+	pkey.data = query.c_str();
+
+	struct par_value value;
+	value.val_buffer = loc_data.data();
+	value.val_buffer_size = field_loc_max_len;
+	value.val_size = 0;
+
+	const char *error_msg = nullptr;
+
+	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
+	if (!db_handle) {
+		throw eckit::Exception("Failed to open Parallax index database");
+	}
+	par_get(db_handle, &pkey, &value, &error_msg);
+	if (error_msg != nullptr) {
+		return false;
+	}
+	if (value.val_size == 0) {
+		return false;
+	}
+
+	eckit::MemoryStream ms(loc_data.data(), (size_t)value.val_size);
+	time_t ts;
+	ms >> ts;
+	auto *loc = eckit::Reanimator<fdb5::FieldLocation>::reanimate(ms);
+	field = fdb5::Field(std::move(*loc), ts, fdb5::FieldDetails());
+
+	return true;
+}
+
+void ParallaxIndex::add(const Key &key, const Field &field)
+{
+	eckit::MemoryHandle h{ (size_t)PATH_MAX };
+	eckit::HandleStream hs{ h };
+	h.openForWrite(eckit::Length(0));
+	{
+		eckit::AutoClose closer(h);
+		takeTimestamp();
+		hs << timestamp();
+		hs << field.location();
+	}
+
+	int field_loc_max_len = 512;
+	if (hs.bytesWritten() > field_loc_max_len) {
+		throw eckit::Exception("Serialized field location exceeded maximum allowed length.");
+	}
+
+	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
+	if (!db_handle) {
+		throw eckit::Exception("Failed to get Parallax database handle.");
+	}
+
+	std::string keyStr = key.valuesToString();
+	par_value valueData;
+	valueData.val_size = hs.bytesWritten();
+	valueData.val_buffer_size = valueData.val_size;
+	valueData.val_buffer = (char *)malloc(valueData.val_size);
+	if (!valueData.val_buffer) {
+		throw eckit::Exception("Memory allocation failed for Parallax index storage");
+	}
+	par_key_value keyData;
+	keyData.k.size = keyStr.size() + 1;
+	keyData.k.data = keyStr.c_str();
+	keyData.v = valueData;
+
+	memcpy(valueData.val_buffer, h.data(), valueData.val_size);
+
+	const char *error_msg = nullptr;
+	par_put(db_handle, &keyData, &error_msg);
+
+	free(valueData.val_buffer);
+
+	if (error_msg != nullptr) {
+		throw eckit::Exception(std::string("Parallax index insertion failed: ") + error_msg);
+	}
 }
 
 void ParallaxIndex::entries(EntryVisitor &visitor) const
@@ -47,11 +180,6 @@ void ParallaxIndex::entries(EntryVisitor &visitor) const
 const std::vector<eckit::URI> ParallaxIndex::dataURIs() const
 {
 	throw std::logic_error("dataURIs Not implemented");
-}
-
-void ParallaxIndex::add(const Key &key, const Field &field)
-{
-	// throw std::logic_error("add Not implemented");
 }
 
 }

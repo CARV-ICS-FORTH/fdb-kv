@@ -14,7 +14,6 @@
 
 namespace fdb5
 {
-
 class ParallaxCatalogueReader : public ParallaxCatalogue, public CatalogueReader {
     public:
 	ParallaxCatalogueReader(const Key &key, const fdb5::Config &config);
@@ -27,14 +26,16 @@ class ParallaxCatalogueReader : public ParallaxCatalogue, public CatalogueReader
 
 	bool selectIndex(const Key &key) override;
 	void deselectIndex() override;
-
 	bool open() override;
+
 	void flush() override
 	{
 	}
+
 	void clean() override
 	{
 	}
+
 	void close() override
 	{
 	}
@@ -50,8 +51,6 @@ class ParallaxCatalogueReader : public ParallaxCatalogue, public CatalogueReader
 
     private:
 	typedef std::map<Key, Index> IndexStore;
-
-    private:
 	IndexStore indexes_;
 	Index current_;
 };

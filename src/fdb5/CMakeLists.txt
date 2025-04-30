@@ -439,6 +439,16 @@ if( HAVE_PARALLAXFDB )
         parallax/ParallaxIndex.cpp
         parallax/ParallaxIndex.h
         parallax/ParallaxIndexLocation.h
+        parallax/ParallaxStore.cpp
+        parallax/ParallaxStore.h
+        parallax/ParallaxFieldLocation.cpp
+        parallax/ParallaxFieldLocation.h
+        parallax/ParallaxNameBase.cpp
+        parallax/ParallaxNameBase.h
+        parallax/ParallaxArray.cpp
+        parallax/ParallaxArray.h
+        parallax/ParallaxArrayPartHandle.cpp
+        parallax/ParallaxArrayPartHandle.h
     )
 endif()
 

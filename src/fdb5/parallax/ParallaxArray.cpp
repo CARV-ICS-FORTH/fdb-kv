@@ -20,8 +20,6 @@ ParallaxArray::ParallaxArray(const ParallaxNameBase &name)
 
 uint64_t ParallaxArray::read(void *buffer, uint64_t length, const eckit::Offset &)
 {
-	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
-
 	struct par_key par_key;
 	std::string key = key_;
 	par_key.size = key.length() + 1;
@@ -31,7 +29,14 @@ uint64_t ParallaxArray::read(void *buffer, uint64_t length, const eckit::Offset 
 				       .val_size = 0,
 				       .val_buffer = (char *)malloc(VALUE_BUFFER_SIZE) };
 
+	size_t hash = std::hash<std::string>{}(key.c_str());
+	int db_index = hash % 16;
+
+	std::string db_name = "par_db" + std::to_string(db_index + 1);
+
+	par_handle db_handle = par_get_db(db_name);
 	const char *error_msg = NULL;
+
 	par_get(db_handle, &par_key, &par_value, &error_msg);
 	if (error_msg) {
 		std::cerr << "Parallax get failed reason: " << error_msg << std::endl;

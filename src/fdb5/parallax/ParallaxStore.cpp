@@ -63,11 +63,15 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 	std::string internalKey = key.valuesToString();
 	internalKey += std::to_string(archive_counter.fetch_add(1));
 
-	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
+	size_t hash = std::hash<std::string>{}(internalKey);
+	int db_index = hash % 16;
+
+	std::string db_name = "par_db" + std::to_string(db_index + 1);
+	par_handle db_handle = par_get_db(db_name);
+
 	const char *error_msg = nullptr;
 
-	struct par_key_value kv {
-	};
+	struct par_key_value kv {};
 	kv.k.data = internalKey.data();
 	kv.k.size = internalKey.size() + 1;
 

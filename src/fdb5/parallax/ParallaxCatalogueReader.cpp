@@ -35,11 +35,9 @@ bool ParallaxCatalogueReader::selectIndex(const Key &key)
 	currentIndexKey_ = key;
 
 	if (indexes_.find(key) == indexes_.end()) {
-		par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
 		const char *error_msg = nullptr;
 
 		std::string keyStr = key.valuesToString();
-
 		par_key keyData;
 		keyData.size = keyStr.size() + 1;
 		keyData.data = keyStr.c_str();
@@ -51,6 +49,12 @@ bool ParallaxCatalogueReader::selectIndex(const Key &key)
 		if (!valueData.val_buffer) {
 			throw eckit::Exception("Memory allocation failed for Parallax index retrieval");
 		}
+
+		size_t hash = std::hash<std::string>{}(keyStr.c_str());
+		int db_index = hash % 16;
+
+		std::string db_name = "par_db" + std::to_string(db_index + 1);
+		par_handle db_handle = par_get_db(db_name);
 
 		par_get(db_handle, &keyData, &valueData, &error_msg);
 

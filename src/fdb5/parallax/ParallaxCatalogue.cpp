@@ -14,6 +14,18 @@
 
 namespace fdb5
 {
+ParallaxCatalogue::ParallaxCatalogue(const Key &key, const fdb5::Config &config)
+	: Catalogue(key, ControlIdentifiers(), config)
+{
+	par_init_db_handles();
+}
+
+ParallaxCatalogue::ParallaxCatalogue(const eckit::URI &uri, const ControlIdentifiers &controlIdentifiers,
+				     const fdb5::Config &config)
+	: Catalogue(Key(), controlIdentifiers, config)
+{
+}
+
 ParallaxCatalogue::~ParallaxCatalogue() = default;
 
 std::string ParallaxCatalogue::type() const
@@ -36,9 +48,6 @@ void ParallaxCatalogue::loadSchema()
 {
 	eckit::Timer timer("ParallaxCatalogue::loadSchema()", eckit::Log::debug<fdb5::LibFdb5>());
 
-	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
-	const char *error_msg = nullptr;
-
 	struct par_key key;
 	std::string key_str = "schema";
 
@@ -50,6 +59,13 @@ void ParallaxCatalogue::loadSchema()
 	if (!value.val_buffer) {
 		throw eckit::Exception("Memory allocation failed for schema retrieval.");
 	}
+
+	size_t hash = std::hash<std::string>{}(key_str.c_str());
+	int db_index = hash % 16;
+
+	std::string db_name = "par_db" + std::to_string(db_index + 1);
+	par_handle db_handle = par_get_db(db_name);
+	const char *error_msg = nullptr;
 
 	par_get(db_handle, &key, &value, &error_msg);
 	if (error_msg) {

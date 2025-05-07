@@ -4,7 +4,7 @@
 
 #include "eckit/config/Resource.h"
 
-#define PARALLAX_L0_SIZE (16 * 1024 * 1024UL);
+#define PARALLAX_L0_SIZE (16 * 1024 * 1024UL)
 #define PARALLAX_GROWTH_FACTOR 8
 #define PARALLAX_VOLUME_ENV_VAR "PARH5_VOLUME"
 #define PARALLAX_MAX_KEY_SIZE 256
@@ -29,3 +29,5 @@ using eckit::PathName;
 	} while (0);
 
 par_handle par_get_db(const std::string &db_name);
+
+void par_init_db_handles();

@@ -21,29 +21,6 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 	: ParallaxCatalogue(key, config)
 	, firstIndexWrite_(false)
 {
-	par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
-	const char *error_msg = NULL;
-
-	par_key_value dbKey_kv;
-	dbKey_kv.k.size = sizeof("key");
-	dbKey_kv.k.data = "key";
-
-	std::ostringstream dbKeyStream;
-	dbKeyStream << dbKey_;
-	std::string dbKeyStr = dbKeyStream.str();
-
-	if (dbKeyStr.size() + 1 > 512) {
-		throw eckit::Exception("Serialised db key exceeded maximum length.");
-	}
-
-	dbKey_kv.v.val_size = dbKeyStr.size() + 1;
-	dbKey_kv.v.val_buffer = (char *)dbKeyStr.c_str();
-
-	par_put(db_handle, &dbKey_kv, &error_msg);
-	if (error_msg) {
-		throw eckit::Exception("Failed to insert dbKey: " + std::string(error_msg));
-	}
-
 	std::string path = config.schemaPath();
 
 	std::stringstream schema_buffer;
@@ -56,7 +33,6 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 	}
 
 	std::string schema_str = schema_buffer.str();
-	error_msg = NULL;
 	par_key_value schema_kv;
 	std::string key_str = "schema";
 
@@ -67,6 +43,13 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 	schema_kv.v.val_buffer = new char[schema_kv.v.val_size];
 	std::memcpy(schema_kv.v.val_buffer, schema_str.c_str(), schema_str.size());
 	schema_kv.v.val_buffer[schema_str.size()] = '\0';
+
+	size_t hash = std::hash<std::string>{}(key_str.c_str());
+	int db_index = hash % 16;
+
+	std::string db_name = "par_db" + std::to_string(db_index + 1);
+	par_handle db_handle = par_get_db(db_name);
+	const char *error_msg = NULL;
 
 	par_put(db_handle, &schema_kv, &error_msg);
 	if (error_msg) {
@@ -99,9 +82,6 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 	currentIndexKey_ = key;
 
 	if (indexes_.find(key) == indexes_.end()) {
-		par_handle db_handle = par_get_db(PARALLAX_GLOBAL_DB);
-		const char *error_msg = nullptr;
-
 		par_key_value kv;
 		std::string keyStr = key.valuesToString();
 		kv.k.size = keyStr.size() + 1;
@@ -114,6 +94,13 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 		if (!kv.v.val_buffer) {
 			throw eckit::Exception("Memory allocation failed for index retrieval.");
 		}
+
+		size_t hash = std::hash<std::string>{}(keyStr.c_str());
+		int db_index = hash % 16;
+
+		std::string db_name = "par_db" + std::to_string(db_index + 1);
+		par_handle db_handle = par_get_db(db_name);
+		const char *error_msg = nullptr;
 
 		par_get(db_handle, &kv.k, &kv.v, &error_msg);
 
@@ -130,6 +117,12 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 			strncpy(kv.v.val_buffer, placeholderValue.c_str(), kv.v.val_buffer_size - 1);
 			kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
 
+			size_t hash = std::hash<std::string>{}(keyStr.c_str());
+			int db_index = hash % 16;
+
+			std::string db_name = "par_db" + std::to_string(db_index + 1);
+			db_handle = par_get_db(db_name);
+
 			par_put(db_handle, &kv, &error_msg);
 
 			if (error_msg) {
@@ -138,7 +131,6 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 			}
 		}
 	}
-
 	indexes_[key] = Index(new ParallaxIndex(key));
 	current_ = indexes_[key];
 	firstIndexWrite_ = true;
@@ -174,6 +166,11 @@ const Index &ParallaxCatalogueWriter::currentIndex()
 
 void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocation> fieldLocation)
 {
+	par_handle db_handle;
+	size_t hash;
+	int db_index;
+	std::string db_name;
+
 	if (current_.null()) {
 		ASSERT(!currentIndexKey_.empty());
 		selectIndex(currentIndexKey_);
@@ -206,12 +203,6 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 
 	current_.put(key, field);
 
-	par_handle db_handle = par_get_db("par_db");
-	if (!db_handle) {
-		std::cerr << "Failed to open Parallax database." << std::endl;
-		_exit(EXIT_FAILURE);
-	}
-
 	if (firstIndexWrite_) {
 		par_key_value kv{};
 		const char *error_message = nullptr;
@@ -223,6 +214,12 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 
 		kv.v.val_buffer = axisNames.data();
 		kv.v.val_size = axisNames.length();
+
+		hash = std::hash<std::string>{}(indexKeyWithAxes.c_str());
+		db_index = hash % 16;
+
+		db_name = "par_db" + std::to_string(db_index + 1);
+		db_handle = par_get_db(db_name);
 
 		par_put(db_handle, &kv, &error_message);
 		if (error_message) {
@@ -250,6 +247,12 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 					  .val_size = 0,
 					  .val_buffer = value_buf.data() };
 
+		hash = std::hash<std::string>{}(axisKey.c_str());
+		db_index = hash % 16;
+
+		db_name = "par_db" + std::to_string(db_index + 1);
+		db_handle = par_get_db(db_name);
+
 		par_get(db_handle, &existing_key, &existing_value, &error_message2);
 
 		std::string updatedValueStr;
@@ -275,6 +278,12 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		kv2.v.val_size = updatedValueStr.size();
 
 		error_message2 = nullptr;
+
+		size_t hash = std::hash<std::string>{}(axisKey.c_str());
+		int db_index = hash % 16;
+
+		std::string db_name = "par_db" + std::to_string(db_index + 1);
+		db_handle = par_get_db(db_name);
 		par_put(db_handle, &kv2, &error_message2);
 		if (error_message2) {
 			_exit(EXIT_FAILURE);

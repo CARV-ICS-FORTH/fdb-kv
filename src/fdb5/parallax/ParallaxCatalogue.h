@@ -11,22 +11,17 @@
 #pragma once
 
 #include "fdb5/database/DB.h"
+#include "fdb5/parallax/parallax_handle.h"
 #include <parallax.h>
 
 namespace fdb5
 {
 class ParallaxCatalogue : public Catalogue {
     public:
-	ParallaxCatalogue(const Key &key, const fdb5::Config &config)
-		: Catalogue(key, ControlIdentifiers(), config)
-	{
-	}
+	ParallaxCatalogue(const Key &key, const fdb5::Config &config);
 
 	ParallaxCatalogue(const eckit::URI &uri, const ControlIdentifiers &controlIdentifiers,
-			  const fdb5::Config &config)
-		: Catalogue(Key(), controlIdentifiers, config)
-	{
-	}
+			  const fdb5::Config &config);
 
 	~ParallaxCatalogue() override;
 

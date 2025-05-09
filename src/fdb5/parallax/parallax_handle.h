@@ -9,6 +9,7 @@
 #define PARALLAX_VOLUME_ENV_VAR "PARH5_VOLUME"
 #define PARALLAX_MAX_KEY_SIZE 256
 #define PARALLAX_GLOBAL_DB "par_db"
+#define PARALLAX_DB_COUNT 16
 
 using eckit::PathName;
 

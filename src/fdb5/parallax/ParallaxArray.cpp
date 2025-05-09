@@ -30,7 +30,7 @@ uint64_t ParallaxArray::read(void *buffer, uint64_t length, const eckit::Offset 
 				       .val_buffer = (char *)malloc(VALUE_BUFFER_SIZE) };
 
 	size_t hash = std::hash<std::string>{}(key.c_str());
-	int db_index = hash % 16;
+	int db_index = hash % PARALLAX_DB_COUNT;
 
 	std::string db_name = "par_db" + std::to_string(db_index + 1);
 

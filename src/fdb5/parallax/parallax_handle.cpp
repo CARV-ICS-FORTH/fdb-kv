@@ -43,8 +43,8 @@ par_handle par_get_db(const std::string &db_name)
 
 void par_init_db_handles()
 {
-	for (int i = 0; i < 16; ++i) {
-		std::string db_name = PARALLAX_GLOBAL_DB + std::to_string(i);
+	for (int i = 0; i < PARALLAX_DB_COUNT; ++i) {
+		std::string db_name = PARALLAX_GLOBAL_DB + std::to_string(i + 1);
 		par_get_db(db_name);
 	}
 }

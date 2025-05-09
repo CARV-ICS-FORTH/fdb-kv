@@ -45,7 +45,7 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 	schema_kv.v.val_buffer[schema_str.size()] = '\0';
 
 	size_t hash = std::hash<std::string>{}(key_str.c_str());
-	int db_index = hash % 16;
+	int db_index = hash % PARALLAX_DB_COUNT;
 
 	std::string db_name = "par_db" + std::to_string(db_index + 1);
 	par_handle db_handle = par_get_db(db_name);
@@ -96,7 +96,7 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 		}
 
 		size_t hash = std::hash<std::string>{}(keyStr.c_str());
-		int db_index = hash % 16;
+		int db_index = hash % PARALLAX_DB_COUNT;
 
 		std::string db_name = "par_db" + std::to_string(db_index + 1);
 		par_handle db_handle = par_get_db(db_name);
@@ -118,7 +118,7 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 			kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
 
 			size_t hash = std::hash<std::string>{}(keyStr.c_str());
-			int db_index = hash % 16;
+			int db_index = hash % PARALLAX_DB_COUNT;
 
 			std::string db_name = "par_db" + std::to_string(db_index + 1);
 			db_handle = par_get_db(db_name);
@@ -216,7 +216,7 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		kv.v.val_size = axisNames.length();
 
 		hash = std::hash<std::string>{}(indexKeyWithAxes.c_str());
-		db_index = hash % 16;
+		db_index = hash % PARALLAX_DB_COUNT;
 
 		db_name = "par_db" + std::to_string(db_index + 1);
 		db_handle = par_get_db(db_name);
@@ -248,7 +248,7 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 					  .val_buffer = value_buf.data() };
 
 		hash = std::hash<std::string>{}(axisKey.c_str());
-		db_index = hash % 16;
+		db_index = hash % PARALLAX_DB_COUNT;
 
 		db_name = "par_db" + std::to_string(db_index + 1);
 		db_handle = par_get_db(db_name);
@@ -280,7 +280,7 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		error_message2 = nullptr;
 
 		size_t hash = std::hash<std::string>{}(axisKey.c_str());
-		int db_index = hash % 16;
+		int db_index = hash % PARALLAX_DB_COUNT;
 
 		std::string db_name = "par_db" + std::to_string(db_index + 1);
 		db_handle = par_get_db(db_name);

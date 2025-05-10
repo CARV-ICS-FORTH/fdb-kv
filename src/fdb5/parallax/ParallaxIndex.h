@@ -8,11 +8,13 @@
  * does it submit to any jurisdiction.
  */
 
-#pragma once
-
+#include "eckit/io/MemoryHandle.h"
+#include "eckit/serialisation/HandleStream.h"
+#include "eckit/serialisation/MemoryStream.h"
 #include "fdb5/database/Index.h"
-#include "fdb5/database/IndexLocation.h"
 #include "fdb5/parallax/ParallaxIndexLocation.h"
+#include "parallax_handle.h"
+#include <limits.h>
 
 namespace fdb5
 {
@@ -91,8 +93,11 @@ class ParallaxIndex : public fdb5::IndexBase {
 	void add(const Key &key, const Field &field) override;
 	bool get(const Key &key, const Key &remapKey, Field &field) const override;
 	void updateAxes();
-	void entries(EntryVisitor &visitor) const override;
-	const std::vector<eckit::URI> dataURIs() const override;
+
+	void entries(EntryVisitor &visitor) const override
+	{
+		throw eckit::Exception("entries Not implemented");
+	}
 
     private:
 	ParallaxIndexLocation location_;

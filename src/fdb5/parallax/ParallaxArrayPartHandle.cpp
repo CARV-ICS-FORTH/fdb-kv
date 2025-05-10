@@ -8,14 +8,7 @@
  * does it submit to any jurisdiction.
  */
 
-#include <memory>
-
-#include "eckit/exception/Exceptions.h"
-
 #include "fdb5/parallax/ParallaxArrayPartHandle.h"
-
-using eckit::Length;
-using eckit::Offset;
 
 namespace fdb5
 {

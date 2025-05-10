@@ -10,45 +10,11 @@
 
 #include "ParallaxStore.h"
 
-#include "eckit/config/Resource.h"
-#include "fdb5/parallax/ParallaxCatalogue.h"
-#include <atomic>
-
 namespace fdb5
 {
 ParallaxStore::ParallaxStore(const Schema &schema, const Key &key, const Config &config)
 	: Store(schema)
 {
-}
-
-eckit::URI ParallaxStore::uri() const
-{
-	throw std::logic_error("uri not implemented");
-}
-
-bool ParallaxStore::uriBelongs(const eckit::URI &uri) const
-{
-	throw std::logic_error("uriBelongs not implemented");
-}
-
-bool ParallaxStore::uriExists(const eckit::URI &uri) const
-{
-	throw std::logic_error("uriExists not implemented");
-}
-
-std::vector<eckit::URI> ParallaxStore::collocatedDataURIs() const
-{
-	throw std::logic_error("collocatedDataURIs not implemented");
-}
-
-std::set<eckit::URI> ParallaxStore::asCollocatedDataURIs(const std::vector<eckit::URI> &uris) const
-{
-	throw std::logic_error("asCollocatedDataURIs not implemented");
-}
-
-bool ParallaxStore::exists() const
-{
-	throw std::logic_error("exists not implemented");
 }
 
 eckit::DataHandle *ParallaxStore::retrieve(Field &field) const
@@ -71,7 +37,7 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 
 	const char *error_msg = nullptr;
 
-	struct par_key_value kv {};
+	struct par_key_value kv;
 	kv.k.data = internalKey.data();
 	kv.k.size = internalKey.size() + 1;
 
@@ -89,18 +55,9 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 	return std::make_unique<ParallaxFieldLocation>(uri, 0, length, Key(nullptr, true));
 }
 
-void ParallaxStore::flush()
-{
-}
-
-void ParallaxStore::remove(const eckit::URI &uri, std::ostream &logAlways, std::ostream &logVerbose, bool doit) const
-{
-	throw std::logic_error("remove not implemented");
-}
-
 void ParallaxStore::print(std::ostream &out) const
 {
-	throw std::logic_error("print not implemented");
+	out << "ParallaxStore";
 }
 
 static StoreBuilder<ParallaxStore> builder("parallax");

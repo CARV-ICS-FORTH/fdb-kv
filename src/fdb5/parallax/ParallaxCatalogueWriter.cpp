@@ -9,11 +9,6 @@
  */
 
 #include "fdb5/parallax/ParallaxCatalogueWriter.h"
-#include "fdb5/LibFdb5.h"
-#include "fdb5/parallax/ParallaxCatalogue.h"
-#include "fdb5/parallax/ParallaxIndex.h"
-#include "parallax_handle.h"
-#include <fstream>
 
 namespace fdb5
 {

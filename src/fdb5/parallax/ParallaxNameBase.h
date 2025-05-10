@@ -10,12 +10,8 @@
 
 #pragma once
 
-#include <memory>
-#include <string>
-
 #include "eckit/filesystem/URI.h"
-#include "eckit/io/DataHandle.h"
-#include "eckit/utils/Optional.h"
+#include "eckit/io/MemoryHandle.h"
 #include "fdb5/parallax/ParallaxArray.h"
 
 namespace fdb5

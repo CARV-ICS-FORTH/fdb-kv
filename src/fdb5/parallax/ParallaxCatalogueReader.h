@@ -8,9 +8,9 @@
  * does it submit to any jurisdiction.
  */
 
-#pragma once
-
 #include "fdb5/parallax/ParallaxCatalogue.h"
+#include "fdb5/parallax/ParallaxIndex.h"
+#include "fdb5/parallax/parallax_handle.h"
 
 namespace fdb5
 {
@@ -24,33 +24,37 @@ class ParallaxCatalogueReader : public ParallaxCatalogue, public CatalogueReader
 		NOTIMP;
 	}
 
-	bool selectIndex(const Key &key) override;
-	void deselectIndex() override;
-	bool open() override;
-
-	void flush() override
+	void deselectIndex() override
 	{
+		NOTIMP; //< should not be called
 	}
-
-	void clean() override
-	{
-	}
-
-	void close() override
-	{
-	}
-
-	bool axis(const std::string &keyword, eckit::StringSet &s) const override;
-
-	bool retrieve(const Key &key, Field &field) const override;
 
 	void print(std::ostream &out) const override
 	{
 		NOTIMP;
 	}
 
+	void flush() override
+	{
+		throw std::logic_error("flush Not implemented");
+	}
+
+	void clean() override
+	{
+		throw std::logic_error("clean Not implemented");
+	}
+
+	void close() override
+	{
+		throw std::logic_error("close Not implemented");
+	}
+
+	bool axis(const std::string &keyword, eckit::StringSet &s) const override;
+	bool retrieve(const Key &key, Field &field) const override;
+	bool open() override;
+	bool selectIndex(const Key &key) override;
+
     private:
-	typedef std::map<Key, Index> IndexStore;
 	IndexStore indexes_;
 	Index current_;
 };

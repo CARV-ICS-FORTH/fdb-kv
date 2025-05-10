@@ -1,8 +1,7 @@
+#include "eckit/config/Resource.h"
 #include "parallax.h"
 #include <unistd.h>
 #include <unordered_map>
-
-#include "eckit/config/Resource.h"
 
 #define PARALLAX_L0_SIZE (16 * 1024 * 1024UL)
 #define PARALLAX_GROWTH_FACTOR 8
@@ -10,8 +9,6 @@
 #define PARALLAX_MAX_KEY_SIZE 256
 #define PARALLAX_GLOBAL_DB "par_db"
 #define PARALLAX_DB_COUNT 16
-
-using eckit::PathName;
 
 #define LSM_DEBUG(...)                                                               \
 	do {                                                                         \

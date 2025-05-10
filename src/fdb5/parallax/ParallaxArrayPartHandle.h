@@ -8,11 +8,9 @@
  * does it submit to any jurisdiction.
  */
 
-#pragma once
-
-#include "eckit/io/DataHandle.h"
 #include "fdb5/parallax/ParallaxNameBase.h"
-#include <optional>
+
+using eckit::Length;
 
 namespace fdb5
 {

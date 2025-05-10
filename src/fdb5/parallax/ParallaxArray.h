@@ -10,15 +10,8 @@
 
 #pragma once
 
-#include "eckit/filesystem/URI.h"
-#include "eckit/io/DataHandle.h"
-#include "fdb5/parallax/parallax_handle.h"
-#include "parallax.h"
-#include <cstdint>
-#include <memory>
-#include <string>
-
 #include "fdb5/parallax/ParallaxNameBase.h"
+#include "fdb5/parallax/parallax_handle.h"
 
 #define VALUE_BUFFER_SIZE (4 * 1024 * 1024) // 4MB in bytes
 
@@ -31,7 +24,6 @@ class ParallaxArray {
 	ParallaxArray(const ParallaxNameBase &name);
 
 	uint64_t read(void *buffer, uint64_t length, const eckit::Offset &);
-
 	void open();
 	void close();
 

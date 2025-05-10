@@ -8,9 +8,9 @@
  * does it submit to any jurisdiction.
  */
 
-#pragma once
-
 #include "fdb5/parallax/ParallaxCatalogue.h"
+#include "fdb5/parallax/ParallaxIndex.h"
+#include <fstream>
 
 namespace fdb5
 {
@@ -60,8 +60,6 @@ class ParallaxCatalogueWriter : public ParallaxCatalogue, public CatalogueWriter
     private:
 	void closeIndexes();
 
-	typedef std::map<Key, Index> IndexStore;
-	
 	IndexStore indexes_;
 	Index current_;
 	bool firstIndexWrite_;

@@ -43,5 +43,5 @@ class ParallaxIndexLocation : public fdb5::IndexLocation {
 	}
 
     private:
-	std::string location_; /*Have to change logic here*/
+	std::string location_;
 };

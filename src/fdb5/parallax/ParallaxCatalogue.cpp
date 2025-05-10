@@ -9,8 +9,6 @@
  */
 
 #include "ParallaxCatalogue.h"
-#include "fdb5/LibFdb5.h"
-#include "parallax_handle.h"
 
 namespace fdb5
 {
@@ -30,18 +28,12 @@ ParallaxCatalogue::~ParallaxCatalogue() = default;
 
 std::string ParallaxCatalogue::type() const
 {
-	throw std::logic_error("type Not implemented");
+	return "parallax";
 }
 
 bool ParallaxCatalogue::exists() const
 {
-	return true; /*Needs extra work*/
-}
-
-WipeVisitor *ParallaxCatalogue::wipeVisitor(const Store &store, const metkit::mars::MarsRequest &request,
-					    std::ostream &out, bool doit, bool porcelain, bool unsafeWipeAll) const
-{
-	throw std::logic_error("wipeVisitor Not implemented");
+	return true;
 }
 
 void ParallaxCatalogue::loadSchema()
@@ -80,19 +72,9 @@ void ParallaxCatalogue::loadSchema()
 	schema_.load(stream);
 }
 
-std::vector<Index> ParallaxCatalogue::indexes(bool sorted) const
-{
-	throw std::logic_error("indexes Not implemented");
-}
-
 const Schema &ParallaxCatalogue::schema() const
 {
 	return schema_;
-}
-
-eckit::URI ParallaxCatalogue::uri() const
-{
-	throw std::logic_error("uri Not implemented");
 }
 
 }

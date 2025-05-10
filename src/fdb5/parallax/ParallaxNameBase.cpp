@@ -9,14 +9,6 @@
  */
 
 #include "ParallaxNameBase.h"
-#include "eckit/exception/Exceptions.h"
-#include "eckit/filesystem/PathName.h"
-#include "eckit/io/Buffer.h"
-#include "eckit/io/FileHandle.h"
-#include "eckit/io/MemoryHandle.h"
-#include "eckit/utils/Tokenizer.h"
-#include <atomic>
-#include <iomanip>
 
 #include "fdb5/parallax/ParallaxArrayPartHandle.h"
 

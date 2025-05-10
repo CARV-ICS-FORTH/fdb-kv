@@ -8,11 +8,7 @@
  * does it submit to any jurisdiction.
  */
 
-#include "fdb5/LibFdb5.h"
-
 #include "fdb5/parallax/ParallaxCatalogueReader.h"
-#include "fdb5/parallax/ParallaxIndex.h"
-#include "fdb5/parallax/parallax_handle.h"
 
 namespace fdb5
 {
@@ -38,17 +34,13 @@ bool ParallaxCatalogueReader::selectIndex(const Key &key)
 		const char *error_msg = nullptr;
 
 		std::string keyStr = key.valuesToString();
-		par_key keyData;
+		struct par_key keyData;
 		keyData.size = keyStr.size() + 1;
 		keyData.data = keyStr.c_str();
 
-		par_value valueData;
-		valueData.val_size = 64;
-		valueData.val_buffer_size = valueData.val_size;
-		valueData.val_buffer = (char *)malloc(valueData.val_size);
-		if (!valueData.val_buffer) {
-			throw eckit::Exception("Memory allocation failed for Parallax index retrieval");
-		}
+		struct par_value valueData = { .val_buffer_size = 32168U,
+					       .val_size = 0,
+					       .val_buffer = (char *)malloc(32168U) };
 
 		size_t hash = std::hash<std::string>{}(keyStr.c_str());
 		int db_index = hash % PARALLAX_DB_COUNT;
@@ -60,6 +52,8 @@ bool ParallaxCatalogueReader::selectIndex(const Key &key)
 
 		if (error_msg != nullptr || valueData.val_size <= 0) {
 			free(valueData.val_buffer);
+			valueData.val_buffer = NULL;
+			valueData.val_size = 0;
 			return false;
 		}
 
@@ -71,11 +65,6 @@ bool ParallaxCatalogueReader::selectIndex(const Key &key)
 	current_ = indexes_[key];
 
 	return true;
-}
-
-void ParallaxCatalogueReader::deselectIndex()
-{
-	NOTIMP; //< should not be called
 }
 
 bool ParallaxCatalogueReader::open()

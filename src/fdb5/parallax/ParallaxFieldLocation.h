@@ -8,12 +8,8 @@
  * does it submit to any jurisdiction.
  */
 
-#pragma once
-
-#include "eckit/io/Length.h"
-#include "eckit/io/Offset.h"
-
 #include "fdb5/database/FieldLocation.h"
+#include "fdb5/parallax/ParallaxArray.h"
 
 namespace fdb5
 {

@@ -9,11 +9,6 @@
  */
 
 #include "fdb5/parallax/ParallaxIndex.h"
-#include "eckit/io/MemoryHandle.h"
-#include "eckit/serialisation/HandleStream.h"
-#include "eckit/serialisation/MemoryStream.h"
-#include "parallax_handle.h"
-#include <limits.h>
 
 namespace fdb5
 {
@@ -159,17 +154,17 @@ void ParallaxIndex::add(const Key &key, const Field &field)
 	}
 
 	std::string keyStr = key.valuesToString();
-	par_value valueData;
+	struct par_value valueData;
 	valueData.val_size = hs.bytesWritten();
 	valueData.val_buffer_size = h.size();
 	valueData.val_buffer = reinterpret_cast<char *>(const_cast<void *>(h.data()));
 	if (!valueData.val_buffer) {
 		throw eckit::Exception("Memory allocation failed for Parallax index storage");
 	}
-	par_key_value keyData;
-	keyData.k.size = keyStr.size() + 1;
-	keyData.k.data = keyStr.c_str();
-	keyData.v = valueData;
+	struct par_key_value kv;
+	kv.k.size = keyStr.size() + 1;
+	kv.k.data = keyStr.c_str();
+	kv.v = valueData;
 
 	size_t hash = std::hash<std::string>{}(keyStr);
 	int db_index = hash % PARALLAX_DB_COUNT;
@@ -182,21 +177,11 @@ void ParallaxIndex::add(const Key &key, const Field &field)
 		throw eckit::Exception("Failed to get Parallax database handle.");
 	}
 
-	par_put(db_handle, &keyData, &error_msg);
+	par_put(db_handle, &kv, &error_msg);
 
 	if (error_msg != nullptr) {
 		throw eckit::Exception(std::string("Parallax index insertion failed: ") + error_msg);
 	}
-}
-
-void ParallaxIndex::entries(EntryVisitor &visitor) const
-{
-	throw std::logic_error("entries Not implemented");
-}
-
-const std::vector<eckit::URI> ParallaxIndex::dataURIs() const
-{
-	throw std::logic_error("dataURIs Not implemented");
 }
 
 }

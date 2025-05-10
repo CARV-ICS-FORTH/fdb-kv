@@ -8,11 +8,8 @@
  * does it submit to any jurisdiction.
  */
 
-#pragma once
-
-#include "fdb5/database/DB.h"
+#include "fdb5/LibFdb5.h"
 #include "fdb5/parallax/parallax_handle.h"
-#include <parallax.h>
 
 namespace fdb5
 {
@@ -28,63 +25,75 @@ class ParallaxCatalogue : public Catalogue {
 	std::string type() const override;
 	bool exists() const override;
 	void loadSchema() override;
-	std::vector<Index> indexes(bool sorted = false) const override;
 	const Schema &schema() const override;
-	eckit::URI uri() const override;
 
 	const Key &indexKey() const override
 	{
 		return currentIndexKey_;
 	}
 
+	std::vector<Index> indexes(bool sorted = false) const override
+	{
+		throw std::logic_error("indexes Not implemented");
+	}
+
+	eckit::URI uri() const override
+	{
+		throw std::logic_error("uri Not implemented");
+	}
+
 	void checkUID() const override
 	{
 		throw std::logic_error("checkUID Not implemented");
-	};
+	}
 
 	void dump(std::ostream &out, bool simple, const eckit::Configuration &conf) const override
 	{
 		throw std::logic_error("dump Not implemented");
-	};
+	}
 
 	std::vector<eckit::PathName> metadataPaths() const override
 	{
 		throw std::logic_error("metadataPaths Not implemented");
-	};
+	}
 
 	StatsReportVisitor *statsReportVisitor() const override
 	{
 		throw std::logic_error("statsReportVisitor Not implemented");
-	};
+	}
 
 	PurgeVisitor *purgeVisitor(const Store &store) const override
 	{
 		throw std::logic_error("purge Visitor Not implemented");
-	};
+	}
 
 	WipeVisitor *wipeVisitor(const Store &store, const metkit::mars::MarsRequest &request, std::ostream &out,
-				 bool doit, bool porcelain, bool unsafeWipeAll) const override;
+				 bool doit, bool porcelain, bool unsafeWipeAll) const override
+	{
+		throw std::logic_error("wipeVisitor Not implemented");
+	}
+
 	MoveVisitor *moveVisitor(const Store &store, const metkit::mars::MarsRequest &request, const eckit::URI &dest,
 				 eckit::Queue<MoveElement> &queue) const override
 	{
 		throw std::logic_error("move Visitor Not implemented");
-	};
+	}
 
 	void maskIndexEntry(const Index &index) const override
 	{
 		throw std::logic_error("mask Index Entry Not implemented");
-	};
+	}
 
 	void allMasked(std::set<std::pair<eckit::URI, eckit::Offset> > &metadata,
 		       std::set<eckit::URI> &data) const override
 	{
 		throw std::logic_error("all Masked Not implemented");
-	};
+	}
 
 	void control(const ControlAction &action, const ControlIdentifiers &identifiers) const override
 	{
 		throw std::logic_error("control Not implemented");
-	};
+	}
 
     protected:
 	Key currentIndexKey_;

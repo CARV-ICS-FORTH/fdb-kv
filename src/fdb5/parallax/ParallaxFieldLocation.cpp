@@ -9,9 +9,6 @@
  */
 
 #include "fdb5/parallax/ParallaxFieldLocation.h"
-#include "eckit/filesystem/URIManager.h"
-#include "fdb5/LibFdb5.h"
-#include "fdb5/parallax/ParallaxArray.h"
 
 namespace fdb5
 {

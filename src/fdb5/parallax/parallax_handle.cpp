@@ -2,10 +2,10 @@
 
 std::unordered_map<std::string, par_handle> par_handles;
 
+int current_index = 0;
+
 par_handle par_get_db(const std::string &db_name)
 {
-	// std::cout << "File: " << __FILE__ << ", Line: " << __LINE__ << ", Function: " << __func__ << std::endl;
-
 	// Check if the database is already opened
 	auto it = par_handles.find(db_name);
 	if (it != par_handles.end()) {
@@ -13,7 +13,9 @@ par_handle par_get_db(const std::string &db_name)
 	}
 
 	// Database is not opened yet, proceed to open it
-	const char *volume_name = getenv(PARALLAX_VOLUME_ENV_VAR);
+
+	std::string volume_path = "/tmp/root/parallax/default" + std::to_string(current_index);
+	const char *volume_name = volume_path.c_str();
 
 	par_db_options db_options = { .volume_name = (char *)volume_name,
 				      .db_name = db_name.c_str(),
@@ -43,8 +45,12 @@ par_handle par_get_db(const std::string &db_name)
 
 void par_init_db_handles()
 {
+	int num_of_servers = par_get_num_of_servers();
 	for (int i = 0; i < PARALLAX_DB_COUNT; ++i) {
-		std::string db_name = PARALLAX_GLOBAL_DB + std::to_string(i + 1);
-		par_get_db(db_name);
+		current_index = i;
+		for (int j = 0; j < num_of_servers; j++) {
+			std::string db_name = PARALLAX_GLOBAL_DB + std::to_string(i * num_of_servers + j);
+			par_get_db(db_name);
+		}
 	}
 }

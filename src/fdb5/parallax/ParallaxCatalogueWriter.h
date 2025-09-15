@@ -24,7 +24,7 @@ class ParallaxCatalogueWriter : public ParallaxCatalogue, public CatalogueWriter
 	void index(const Key &key, const eckit::URI &uri, eckit::Offset offset, eckit::Length length) override
 	{
 		NOTIMP;
-	};
+	}
 
 	void reconsolidate() override
 	{
@@ -35,7 +35,7 @@ class ParallaxCatalogueWriter : public ParallaxCatalogue, public CatalogueWriter
 		       bool unmount) override
 	{
 		NOTIMP;
-	};
+	}
 
 	const Index &currentIndex() override;
 

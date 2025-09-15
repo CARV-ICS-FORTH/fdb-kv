@@ -13,7 +13,7 @@
 #include "fdb5/parallax/ParallaxNameBase.h"
 #include "fdb5/parallax/parallax_handle.h"
 
-#define VALUE_BUFFER_SIZE (4 * 1024 * 1024) // 4MB in bytes
+#define VALUE_BUFFER_SIZE (4 * 1024 * 1024)
 
 namespace fdb5
 {

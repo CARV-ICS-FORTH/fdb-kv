@@ -126,6 +126,7 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 			}
 		}
 	}
+
 	indexes_[key] = Index(new ParallaxIndex(key));
 	current_ = indexes_[key];
 	firstIndexWrite_ = true;
@@ -199,7 +200,7 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 	current_.put(key, field);
 
 	if (firstIndexWrite_) {
-		par_key_value kv{};
+		par_key_value kv;
 		const char *error_message = nullptr;
 
 		std::string indexKeyWithAxes = "axes";
@@ -232,7 +233,7 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		const std::string &axisKey = axesToExpand.back();
 		const std::string &newValue = valuesToAdd.back();
 
-		par_key_value kv2{};
+		par_key_value kv2;
 		const char *error_message2 = nullptr;
 
 		par_key existing_key{ .size = static_cast<uint32_t>(axisKey.size()), .data = axisKey.c_str() };
@@ -297,7 +298,7 @@ void ParallaxCatalogueWriter::flush()
 
 void ParallaxCatalogueWriter::closeIndexes()
 {
-	indexes_.clear(); // all indexes instances destroyed
+	indexes_.clear();
 }
 
 static fdb5::CatalogueBuilder<fdb5::ParallaxCatalogueWriter> builder("parallax.writer");

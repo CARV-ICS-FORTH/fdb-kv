@@ -26,7 +26,7 @@ class ParallaxCatalogueReader : public ParallaxCatalogue, public CatalogueReader
 
 	void deselectIndex() override
 	{
-		NOTIMP; //< should not be called
+		NOTIMP;
 	}
 
 	void print(std::ostream &out) const override

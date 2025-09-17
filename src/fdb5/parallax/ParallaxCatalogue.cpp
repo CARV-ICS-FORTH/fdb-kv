@@ -55,7 +55,7 @@ void ParallaxCatalogue::loadSchema()
 	size_t hash = std::hash<std::string>{}(key_str.c_str());
 	int db_index = hash % PARALLAX_DB_COUNT;
 
-	std::string db_name = "par_db" + std::to_string(db_index + 1);
+	std::string db_name = "par_db" + std::to_string(db_index);
 	par_handle db_handle = par_get_db(db_name);
 	const char *error_msg = nullptr;
 

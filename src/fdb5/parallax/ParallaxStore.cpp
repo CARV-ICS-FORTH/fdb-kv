@@ -32,7 +32,7 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 	size_t hash = std::hash<std::string>{}(internalKey);
 	int db_index = hash % PARALLAX_DB_COUNT;
 
-	std::string db_name = "par_db" + std::to_string(db_index + 1);
+	std::string db_name = "par_db" + std::to_string(db_index);
 	par_handle db_handle = par_get_db(db_name);
 
 	const char *error_msg = nullptr;

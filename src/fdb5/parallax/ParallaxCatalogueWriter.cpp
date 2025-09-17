@@ -42,7 +42,7 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 	size_t hash = std::hash<std::string>{}(key_str.c_str());
 	int db_index = hash % PARALLAX_DB_COUNT;
 
-	std::string db_name = "par_db" + std::to_string(db_index + 1);
+	std::string db_name = "par_db" + std::to_string(db_index);
 	par_handle db_handle = par_get_db(db_name);
 	const char *error_msg = NULL;
 
@@ -93,7 +93,7 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 		size_t hash = std::hash<std::string>{}(keyStr.c_str());
 		int db_index = hash % PARALLAX_DB_COUNT;
 
-		std::string db_name = "par_db" + std::to_string(db_index + 1);
+		std::string db_name = "par_db" + std::to_string(db_index);
 		par_handle db_handle = par_get_db(db_name);
 		const char *error_msg = nullptr;
 
@@ -115,7 +115,7 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 			size_t hash = std::hash<std::string>{}(keyStr.c_str());
 			int db_index = hash % PARALLAX_DB_COUNT;
 
-			std::string db_name = "par_db" + std::to_string(db_index + 1);
+			std::string db_name = "par_db" + std::to_string(db_index);
 			db_handle = par_get_db(db_name);
 
 			par_put(db_handle, &kv, &error_msg);
@@ -214,7 +214,7 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		hash = std::hash<std::string>{}(indexKeyWithAxes.c_str());
 		db_index = hash % PARALLAX_DB_COUNT;
 
-		db_name = "par_db" + std::to_string(db_index + 1);
+		db_name = "par_db" + std::to_string(db_index);
 		db_handle = par_get_db(db_name);
 
 		par_put(db_handle, &kv, &error_message);
@@ -246,7 +246,7 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		hash = std::hash<std::string>{}(axisKey.c_str());
 		db_index = hash % PARALLAX_DB_COUNT;
 
-		db_name = "par_db" + std::to_string(db_index + 1);
+		db_name = "par_db" + std::to_string(db_index);
 		db_handle = par_get_db(db_name);
 
 		par_get(db_handle, &existing_key, &existing_value, &error_message2);
@@ -278,7 +278,7 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		size_t hash = std::hash<std::string>{}(axisKey.c_str());
 		int db_index = hash % PARALLAX_DB_COUNT;
 
-		std::string db_name = "par_db" + std::to_string(db_index + 1);
+		std::string db_name = "par_db" + std::to_string(db_index);
 		db_handle = par_get_db(db_name);
 		par_put(db_handle, &kv2, &error_message2);
 		if (error_message2) {

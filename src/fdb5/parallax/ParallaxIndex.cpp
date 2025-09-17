@@ -50,7 +50,7 @@ void ParallaxIndex::updateAxes()
 	hash = std::hash<std::string>{}(keyStr.c_str());
 	db_index = hash % PARALLAX_DB_COUNT;
 
-	db_name = "par_db" + std::to_string(db_index + 1);
+	db_name = "par_db" + std::to_string(db_index);
 	db_handle = par_get_db(db_name);
 	par_get(db_handle, &axes_key, &axes_value, &error_msg);
 
@@ -76,7 +76,7 @@ void ParallaxIndex::updateAxes()
 		hash = std::hash<std::string>{}(axisKeyStr.c_str());
 		db_index = hash % PARALLAX_DB_COUNT;
 
-		db_name = "par_db" + std::to_string(db_index + 1);
+		db_name = "par_db" + std::to_string(db_index);
 		db_handle = par_get_db(db_name);
 
 		par_get(db_handle, &axis_key, &axis_value, &error_msg);
@@ -112,7 +112,7 @@ bool ParallaxIndex::get(const Key &key, const Key &remapKey, Field &field) const
 	size_t hash = std::hash<std::string>{}(query.c_str());
 	int db_index = hash % PARALLAX_DB_COUNT;
 
-	std::string db_name = "par_db" + std::to_string(db_index + 1);
+	std::string db_name = "par_db" + std::to_string(db_index);
 	par_handle db_handle = par_get_db(db_name);
 	const char *error_msg = nullptr;
 
@@ -169,7 +169,7 @@ void ParallaxIndex::add(const Key &key, const Field &field)
 	size_t hash = std::hash<std::string>{}(keyStr);
 	int db_index = hash % PARALLAX_DB_COUNT;
 
-	std::string db_name = "par_db" + std::to_string(db_index + 1);
+	std::string db_name = "par_db" + std::to_string(db_index);
 	par_handle db_handle = par_get_db(db_name);
 	const char *error_msg = nullptr;
 

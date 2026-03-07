@@ -3,17 +3,22 @@
 ## 1. Build fdb-kv
 
 - Read the `README.md` file in the project, and also check the `Dockerfile` to understand how to download the necessary dependencies for the project.
-- **IMPORTANT:**
-  Use both of these flags:
+- **IMPORTANT:** You must provide the path to your installed dependencies (like `eckit`, `metkit`, and `eccodes`) using `-DCMAKE_PREFIX_PATH`:
 
-```
--DUSE_PARALLAX=ON -DHAVE_PARALLAXFDB=ON
+```bash
+ecbuild --prefix=~/local \
+  -DCMAKE_BUILD_TYPE="Release" \
+  -DUSE_PARALLAX=ON \
+  -DHAVE_PARALLAXFDB=ON \
+  -DCMAKE_PREFIX_PATH="/path/to/your/local/dependencies" \
+  /path/to/fdb-kv/source
 ```
 
 ## 2. Build Parallax
 
 Parallax provides two tested branches that support fdb.
 There are two Parallax servers:
+
 - One using TCP/IP protocol
 - One using InfiniBand (RDMA)
 

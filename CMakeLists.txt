@@ -3,42 +3,26 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package( ecbuild 3.7 REQUIRED HINTS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/../ecbuild)
 
-# Search for the library in /home/gesalous/local/lib
-find_library(PARALLAX_LIBRARY 
-             NAMES parallax
-	     HINTS ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib64)
-
-
-# Search for the library in /home/gesalous/local/lib
-find_library(PARALLAX_NET_LIBRARY 
-             NAMES parallax_net_lib
-	     HINTS ${CMAKE_INSTALL_PREFIX}/lib ${CMAKE_INSTALL_PREFIX}/lib64)
-
-# Search for the header in /home/gesalous/local/include
-find_path(PARALLAX_INCLUDE_DIR 
-          NAMES parallax.h 
-          HINTS ${CMAKE_INSTALL_PREFIX}/include)
-
+find_library(PARALLAX_LIBRARY NAMES parallax)
+find_library(PARALLAX_NET_LIBRARY NAMES parallax_net_lib)
+find_path(PARALLAX_INCLUDE_DIR NAMES parallax.h)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-
 if(PARALLAX_LIBRARY AND PARALLAX_INCLUDE_DIR)
-  message(INFO  "--> Parallax found!")
+  message(INFO " --> Parallax found!")
   message(INFO " --> Library: ${PARALLAX_LIBRARY}")
   message(INFO " --> Include directory: ${PARALLAX_INCLUDE_DIR}")
+  include_directories(${PARALLAX_INCLUDE_DIR})
 else()
   message(FATAL_ERROR "Parallax not found!")
 endif()
 
-
 if(PARALLAX_NET_LIBRARY)
-  message(INFO  "--> Parallax NETWORK LIBRARY found!")
+  message(INFO " --> Parallax NETWORK LIBRARY found!")
   message(INFO " --> Library: ${PARALLAX_NET_LIBRARY}")
-  message(INFO " --> Include directory: ${PARALLAX_INCLUDE_DIR}")
 else()
   message(WARN "Parallax NETWORK library not found!")
 endif()
-
 
 project( fdb5 LANGUAGES C CXX )
 
@@ -213,9 +197,25 @@ get_directory_property( fdb5_DEFINITIONS COMPILE_DEFINITIONS )
 
 add_subdirectory( src )
 add_subdirectory( tests )
-include_directories( ${PARALLAX_INCLUDE_DIR} )
 
 ### finalize
+
+cmake_policy(SET CMP0079 NEW)
+
+if(TARGET fdb5)
+    target_link_libraries(fdb5 PRIVATE ${PARALLAX_LIBRARY})
+    if(PARALLAX_NET_LIBRARY)
+        target_link_libraries(fdb5 PRIVATE ${PARALLAX_NET_LIBRARY})
+    endif()
+endif()
+
+if(TARGET fdb-hammer AND eccodes_FOUND)
+    target_link_libraries(fdb-hammer PRIVATE ${eccodes_LIBRARIES})
+endif()
+
+if(TARGET fdb-patch AND eccodes_FOUND)
+    target_link_libraries(fdb-patch PRIVATE ${eccodes_LIBRARIES})
+endif()
 
 ecbuild_install_project( NAME fdb )
 

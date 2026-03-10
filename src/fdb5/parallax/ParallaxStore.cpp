@@ -38,7 +38,7 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 	const char *error_msg = nullptr;
 
 	struct par_key_value kv;
-	kv.k.data = internalKey.data();
+	kv.k.data = internalKey.c_str();
 	kv.k.size = internalKey.size() + 1;
 
 	kv.v.val_buffer = const_cast<char *>(reinterpret_cast<const char *>(data));

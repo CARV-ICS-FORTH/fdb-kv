@@ -38,11 +38,12 @@ bool ParallaxCatalogueReader::selectIndex(const Key &key)
 		keyData.size = keyStr.size() + 1;
 		keyData.data = keyStr.c_str();
 
-		struct par_value valueData = { .val_buffer_size = 32168U,
+		std::vector<char> buffer(32168U);
+		struct par_value valueData = { .val_buffer_size = static_cast<uint32_t>(buffer.size()),
 					       .val_size = 0,
-					       .val_buffer = (char *)malloc(32168U) };
+					       .val_buffer = buffer.data() };
 
-		size_t hash = std::hash<std::string>{}(keyStr.c_str());
+		size_t hash = std::hash<std::string>{}(keyStr);
 		int db_index = hash % PARALLAX_DB_COUNT;
 
 		std::string db_name = "par_db" + std::to_string(db_index);
@@ -51,13 +52,8 @@ bool ParallaxCatalogueReader::selectIndex(const Key &key)
 		par_get(db_handle, &keyData, &valueData, &error_msg);
 
 		if (error_msg != nullptr || valueData.val_size <= 0) {
-			free(valueData.val_buffer);
-			valueData.val_buffer = NULL;
-			valueData.val_size = 0;
 			return false;
 		}
-
-		free(valueData.val_buffer);
 
 		indexes_[key] = Index(new ParallaxIndex(key, true));
 	}

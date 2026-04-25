@@ -11,6 +11,7 @@
 #include "fdb5/parallax/ParallaxCatalogue.h"
 #include "fdb5/parallax/ParallaxFieldLocation.h"
 #include <atomic>
+#include <limits.h>
 
 namespace fdb5
 {

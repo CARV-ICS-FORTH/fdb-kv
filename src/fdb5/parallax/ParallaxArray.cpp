@@ -39,7 +39,8 @@ uint64_t ParallaxArray::read(void *buffer, uint64_t length, const eckit::Offset 
 	par_handle db_handle = par_get_db(db_name);
 	const char *error_msg = NULL;
 
-	par_get(db_handle, &par_key, &par_value, &error_msg);
+	// par_get(db_handle, &par_key, &par_value, &error_msg);
+	read_blob(db_handle, &par_key, &par_value, &error_msg);
 	if (error_msg) {
 		std::cerr << "Parallax get failed reason: " << error_msg << std::endl;
 		return 0;

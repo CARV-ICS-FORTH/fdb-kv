@@ -26,8 +26,13 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 {
 	static std::atomic<uint64_t> archive_counter{ 0 };
 
-	std::string internalKey = key.valuesToString();
-	internalKey += std::to_string(archive_counter.fetch_add(1));
+	static std::string unique_prefix = []() {
+		char hostname[HOST_NAME_MAX];
+		gethostname(hostname, HOST_NAME_MAX);
+		return std::string(hostname) + "_" + std::to_string(getpid()) + "_";
+	}();
+
+	std::string internalKey = key.valuesToString() + "_" + unique_prefix + std::to_string(archive_counter.fetch_add(1));
 
 	size_t hash = std::hash<std::string>{}(internalKey);
 	int db_index = hash % PARALLAX_DB_COUNT;
@@ -44,7 +49,8 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 	kv.v.val_buffer = const_cast<char *>(reinterpret_cast<const char *>(data));
 	kv.v.val_size = length;
 
-	par_put(db_handle, &kv, &error_msg);
+	// par_put(db_handle, &kv, &error_msg);
+	write_blob(db_handle,&kv, &error_msg);
 
 	if (error_msg) {
 		std::cerr << "Parallax put failed: " << error_msg << std::endl;

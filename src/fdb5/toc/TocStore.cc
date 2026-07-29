@@ -105,10 +105,7 @@ bool TocStore::exists() const {
 eckit::DataHandle* TocStore::retrieve(Field& field) const {
     return field.dataHandle();
 }
-#define write_once
-bool written_once = false;
-long len = 0;
-eckit::Offset position = 0;
+
 std::unique_ptr<FieldLocation> TocStore::archive(const Key &key, const void *data, eckit::Length length) {
     dirty_ = true;
 
@@ -116,19 +113,9 @@ std::unique_ptr<FieldLocation> TocStore::archive(const Key &key, const void *dat
 
     eckit::DataHandle &dh = getDataHandle(dataPath);
 
-    
-
-#ifdef write_once
-    // michalis hack
-    if (written_once == false){
-        position = dh.position();
-        len = dh.write( data, length );
-        written_once = true;
-    }
-#else   
-
     eckit::Offset position = dh.position();
-#endif
+
+    long len = dh.write( data, length );
 
     ASSERT(len == length);
 

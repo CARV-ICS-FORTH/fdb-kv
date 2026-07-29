@@ -1,3 +1,6 @@
+#ifndef PARALLAX_HANDLE_H
+#define PARALLAX_HANDLE_H
+
 #include "eckit/config/Resource.h"
 #include "parallax.h"
 #include <unistd.h>
@@ -10,12 +13,12 @@
 #define PARALLAX_GLOBAL_DB "par_db"
 #define PARALLAX_DB_COUNT 8
 
-#define LSM_DEBUG(...)                                                               \
-	do {                                                                         \
-		char buffer[1024];                                                   \
-		snprintf(buffer, sizeof(buffer), __VA_ARGS__);                       \
-		::std::cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << " " \
-			    << " DEBUG: " << buffer << ::std::endl;                  \
+#define LSM_DEBUG(...)                                                                                       \
+	do {                                                                                                 \
+		char buffer[1024];                                                                           \
+		snprintf(buffer, sizeof(buffer), __VA_ARGS__);                                               \
+		::std::cout << __FILE__ << ":" << __func__ << ":" << __LINE__ << " " << " DEBUG: " << buffer \
+			    << ::std::endl;                                                                  \
 	} while (0);
 
 #define LSM_FATAL(...)                                                                                                \
@@ -26,6 +29,10 @@
 		_exit(EXIT_FAILURE);                                                                                  \
 	} while (0);
 
+extern uint32_t prefix;
+
 par_handle par_get_db(const std::string &db_name);
 
 void par_init_db_handles();
+
+#endif

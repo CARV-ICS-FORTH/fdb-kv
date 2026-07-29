@@ -4,6 +4,8 @@ std::unordered_map<std::string, par_handle> par_handles;
 
 int current_index = 0;
 
+uint32_t prefix = 0;
+
 par_handle par_get_db(const std::string &db_name)
 {
 	// Check if the database is already opened

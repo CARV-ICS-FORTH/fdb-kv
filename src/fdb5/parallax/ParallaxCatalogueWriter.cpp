@@ -14,10 +14,15 @@ namespace fdb5
 {
 ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Config &config)
 	: ParallaxCatalogue(key, config)
-	, firstIndexWrite_(false)
+	, firstIndexWrite_(true)
 {
-	std::string path = config.schemaPath();
+	par_handle db_handle = par_get_db("par_db0");
+	std::string dataset_name = this->key().valuesToString();
 
+	prefix = par_generate_unique_id(db_handle);
+	std::string prefix_str = std::to_string(prefix);
+
+	std::string path = config.schemaPath();
 	std::stringstream schema_buffer;
 	std::ifstream file(path);
 	if (file.is_open()) {
@@ -26,43 +31,45 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 	} else {
 		throw eckit::Exception("Error opening schema file: " + path);
 	}
-
 	std::string schema_str = schema_buffer.str();
+
 	par_key_value schema_kv;
-	std::string key_str = "schema";
-
-	schema_kv.k.size = key_str.size() + 1;
-	schema_kv.k.data = key_str.c_str();
-
+	std::string fullKey = "id" + std::to_string(prefix) + "_schema";
+	schema_kv.k.size = fullKey.size() + 1;
+	schema_kv.k.data = fullKey.c_str();
 	schema_kv.v.val_size = schema_str.size() + 1;
 	schema_kv.v.val_buffer = new char[schema_kv.v.val_size];
 	std::memcpy(schema_kv.v.val_buffer, schema_str.c_str(), schema_str.size());
 	schema_kv.v.val_buffer[schema_str.size()] = '\0';
 
-	size_t hash = std::hash<std::string>{}(key_str.c_str());
-	int db_index = hash % PARALLAX_DB_COUNT;
-
-	std::string db_name = "par_db" + std::to_string(db_index);
-	par_handle db_handle = par_get_db(db_name);
-	const char *error_msg = NULL;
-
-	par_put(db_handle, &schema_kv, &error_msg);
-	if (error_msg) {
-		std::cout << "Sorry Parallax put failed reason: " << error_msg << std::endl;
-		delete[] schema_kv.v.val_buffer;
-		_exit(EXIT_FAILURE);
-	}
-
+	const char *schema_err = NULL;
+	par_put(db_handle, &schema_kv, &schema_err);
 	delete[] schema_kv.v.val_buffer;
+	if (schema_err)
+		throw eckit::Exception(std::string("Parallax put failed for schema: ") + schema_err);
 
-	eckit::Log::debug<LibFdb5>() << "Copy schema from " << config_.schemaPath() << " at key 'schema'." << std::endl;
+	par_key_value lookup_kv;
+	lookup_kv.k.size = dataset_name.size() + 1;
+	lookup_kv.k.data = dataset_name.c_str();
+	lookup_kv.v.val_size = prefix_str.size() + 1;
+	lookup_kv.v.val_buffer = new char[lookup_kv.v.val_size];
+	std::memcpy(lookup_kv.v.val_buffer, prefix_str.c_str(), lookup_kv.v.val_size);
+
+	const char *lookup_err = NULL;
+	par_put(db_handle, &lookup_kv, &lookup_err);
+	delete[] lookup_kv.v.val_buffer;
+	if (lookup_err)
+		throw eckit::Exception(std::string("Failed to save dataset lookup record: ") + lookup_err);
+
+	eckit::Log::debug<LibFdb5>()
+		<< "Created new dataset " << dataset_name << " (prefix " << prefix << ")" << std::endl;
 
 	ParallaxCatalogue::loadSchema();
 }
 
 ParallaxCatalogueWriter::ParallaxCatalogueWriter(const eckit::URI &uri, const fdb5::Config &config)
 	: ParallaxCatalogue(uri, ControlIdentifiers{}, config)
-	, firstIndexWrite_(false)
+	, firstIndexWrite_(true)
 {
 }
 
@@ -80,8 +87,9 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 		std::string keyStr = key.valuesToString();
 
 		struct par_key_value kv;
-		kv.k.size = keyStr.size() + 1;
-		kv.k.data = keyStr.c_str();
+		std::string fullKey = "id" + std::to_string(prefix) + "_" + keyStr;
+		kv.k.size = fullKey.size() + 1;
+		kv.k.data = fullKey.c_str();
 
 		uint32_t buffer_size = 32168U;
 		std::vector<char> buffer(buffer_size);
@@ -101,6 +109,8 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 
 		error_msg = nullptr;
 		if (kv.v.val_size <= 0) {
+			std::string fullKey = "id" + std::to_string(prefix) + "_" + keyStr;
+			kv.k.data = fullKey.c_str();
 			std::string placeholderValue = "parallax_index_placeholder";
 
 			if (placeholderValue.length() > kv.v.val_buffer_size) {
@@ -111,7 +121,8 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 			strncpy(kv.v.val_buffer, placeholderValue.c_str(), kv.v.val_buffer_size - 1);
 			kv.v.val_buffer[kv.v.val_buffer_size - 1] = '\0';
 
-			par_put(db_handle, &kv, &error_msg);
+			par_async_put(db_handle, &kv, &error_msg);
+			// par_put(db_handle, &kv, &error_msg);
 
 			if (error_msg) {
 				throw eckit::Exception(std::string("Failed to insert placeholder index: ") + error_msg);
@@ -121,7 +132,7 @@ bool ParallaxCatalogueWriter::selectIndex(const Key &key)
 
 	indexes_[key] = Index(new ParallaxIndex(key));
 	current_ = indexes_[key];
-	firstIndexWrite_ = true;
+
 	return true;
 }
 
@@ -129,7 +140,6 @@ void ParallaxCatalogueWriter::deselectIndex()
 {
 	current_ = Index();
 	currentIndexKey_ = Key();
-	firstIndexWrite_ = false;
 }
 
 void ParallaxCatalogueWriter::clean()
@@ -168,8 +178,6 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 
 	const_cast<fdb5::IndexAxis &>(current_.axes()).sort();
 
-	std::vector<std::string> axesToExpand;
-	std::vector<std::string> valuesToAdd;
 	std::string axisNames = "";
 	std::string sep = "";
 
@@ -182,12 +190,14 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		axisNames += sep + keyword;
 		sep = ",";
 
-		const auto &axis_set = current_.axes().values(keyword);
-		if (!axis_set.contains(value)) {
-			axesToExpand.push_back(keyword);
-			valuesToAdd.push_back(value);
+		if (knownAxisValues_[keyword].find(value) == knownAxisValues_[keyword].end()) {
+			knownAxisValues_[keyword].insert(value);
+			dirtyAxes_.insert(keyword);
 		}
 	}
+
+	static size_t totalFieldsArchived = 0;
+	totalFieldsArchived++;
 
 	current_.put(key, field);
 
@@ -198,9 +208,8 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		std::string indexKeyWithAxes = "axes";
 
 		kv.k.data = indexKeyWithAxes.c_str();
-		kv.k.size = indexKeyWithAxes.size();
 
-		kv.v.val_buffer = axisNames.data();
+		kv.v.val_buffer = (char *)axisNames.data();
 		kv.v.val_size = axisNames.length();
 
 		hash = std::hash<std::string>{}(indexKeyWithAxes.c_str());
@@ -209,7 +218,11 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		db_name = "par_db" + std::to_string(db_index);
 		db_handle = par_get_db(db_name);
 
-		par_put(db_handle, &kv, &error_message);
+		std::string fullKey = "id" + std::to_string(prefix) + "_" + kv.k.data;
+		kv.k.data = fullKey.c_str();
+		kv.k.size = fullKey.size();
+		par_async_put(db_handle, &kv, &error_message);
+		// par_put(db_handle, &kv, &error_message);
 		if (error_message) {
 			std::cerr << "Parallax put failed: " << error_message << std::endl;
 			_exit(EXIT_FAILURE);
@@ -217,20 +230,24 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 
 		firstIndexWrite_ = false;
 	}
+}
 
-	if (axesToExpand.empty())
-		return;
+void ParallaxCatalogueWriter::flush()
+{
+	for (auto &pair : indexes_) {
+		if (!pair.second.null()) {
+			const_cast<fdb5::IndexAxis &>(pair.second.axes()).sort();
+		}
+	}
 
-	while (!axesToExpand.empty()) {
-		const std::string &axisKey = axesToExpand.back();
-		const std::string &newValue = valuesToAdd.back();
+	for (const std::string &axisKey : dirtyAxes_) {
+		struct par_key_value kv;
+		const char *error_message = nullptr;
 
-		struct par_key_value kv2;
-		const char *error_message2 = nullptr;
+		std::string fullKey = "id" + std::to_string(prefix) + "_" + axisKey;
+		par_key existing_key{ .size = static_cast<uint32_t>(fullKey.size()), .data = fullKey.c_str() };
 
-		par_key existing_key{ .size = static_cast<uint32_t>(axisKey.size()), .data = axisKey.c_str() };
-
-		std::vector<char> value_buf(1024);
+		std::vector<char> value_buf(32 * 1024);
 		par_value existing_value{ .val_buffer_size = static_cast<uint32_t>(value_buf.size()),
 					  .val_size = 0,
 					  .val_buffer = value_buf.data() };
@@ -241,46 +258,51 @@ void ParallaxCatalogueWriter::archive(const Key &key, std::unique_ptr<FieldLocat
 		std::string db_name = "par_db" + std::to_string(db_index);
 		par_handle db_handle = par_get_db(db_name);
 
-		par_get(db_handle, &existing_key, &existing_value, &error_message2);
+		par_get(db_handle, &existing_key, &existing_value, &error_message);
 
-		std::string updatedValueStr;
-		if (!error_message2 && existing_value.val_size > 0) {
+		std::set<std::string> mergedValues;
+
+		if (!error_message && existing_value.val_size > 0) {
 			size_t safe_size = std::min(static_cast<size_t>(existing_value.val_size), value_buf.size());
 			std::string oldValue(value_buf.begin(), value_buf.begin() + safe_size);
 
 			std::vector<std::string> tokens;
 			eckit::Tokenizer t(",");
 			t(oldValue, tokens);
-
-			if (std::find(tokens.begin(), tokens.end(), newValue) == tokens.end()) {
-				oldValue += "," + newValue;
+			for (const auto &val : tokens) {
+				mergedValues.insert(val);
 			}
-			updatedValueStr = oldValue;
-		} else {
-			updatedValueStr = newValue;
 		}
 
-		kv2.k.data = axisKey.c_str();
-		kv2.k.size = axisKey.size();
-
-		kv2.v.val_buffer = (char *)updatedValueStr.c_str();
-		kv2.v.val_size = updatedValueStr.size();
-
-		error_message2 = nullptr;
-		par_put(db_handle, &kv2, &error_message2);
-
-		if (error_message2) {
-			std::cerr << "Parallax put failed for axis " << axisKey << ": " << error_message2 << std::endl;
-			_exit(EXIT_FAILURE);
+		for (const auto &val : knownAxisValues_[axisKey]) {
+			mergedValues.insert(val);
 		}
 
-		axesToExpand.pop_back();
-		valuesToAdd.pop_back();
+		std::string updatedValueStr = "";
+		std::string sep = "";
+		for (const auto &val : mergedValues) {
+			updatedValueStr += sep + val;
+			sep = ",";
+		}
+
+		kv.k.data = axisKey.c_str();
+		kv.v.val_buffer = (char *)updatedValueStr.c_str();
+		kv.v.val_size = updatedValueStr.size();
+
+		error_message = nullptr;
+		fullKey = "id" + std::to_string(prefix) + "_" + kv.k.data;
+		kv.k.data = fullKey.c_str();
+		kv.k.size = fullKey.size();
+		std::cout << "async key" << kv.k.data << std::endl;
+		par_async_put(db_handle, &kv, &error_message);
+		// par_put(db_handle, &kv, &error_message);
+
+		if (error_message) {
+			std::cerr << "Parallax put failed for axis " << axisKey << ": " << error_message << std::endl;
+		}
 	}
-}
 
-void ParallaxCatalogueWriter::flush()
-{
+	dirtyAxes_.clear();
 	if (!current_.null())
 		current_ = Index();
 }

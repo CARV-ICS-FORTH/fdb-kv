@@ -63,6 +63,8 @@ class ParallaxCatalogueWriter : public ParallaxCatalogue, public CatalogueWriter
 	IndexStore indexes_;
 	Index current_;
 	bool firstIndexWrite_;
+	std::set<std::string> dirtyAxes_;
+	std::map<std::string, std::set<std::string> > knownAxisValues_;
 };
 
 }

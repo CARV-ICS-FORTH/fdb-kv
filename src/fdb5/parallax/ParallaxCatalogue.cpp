@@ -40,34 +40,28 @@ void ParallaxCatalogue::loadSchema()
 {
 	eckit::Timer timer("ParallaxCatalogue::loadSchema()", eckit::Log::debug<fdb5::LibFdb5>());
 
+	par_handle db_handle = par_get_db("par_db0");
+
+	std::string fullKey = "id" + std::to_string(prefix) + "_schema";
+
 	struct par_key key;
-	std::string key_str = "schema";
 
-	key.size = key_str.size() + 1;
-	key.data = key_str.c_str();
+	key.data = fullKey.c_str();
+	key.size = fullKey.size() + 1;
 
-	struct par_value value = { .val_buffer_size = 32168U, .val_size = 0, .val_buffer = (char *)malloc(32168U) };
+	std::vector<char> schema_buffer(32168U);
+	struct par_value schema_value = { .val_buffer_size = 32168U,
+					  .val_size = 0,
+					  .val_buffer = schema_buffer.data() };
 
-	if (!value.val_buffer) {
-		throw eckit::Exception("Memory allocation failed for schema retrieval.");
-	}
-
-	size_t hash = std::hash<std::string>{}(key_str.c_str());
-	int db_index = hash % PARALLAX_DB_COUNT;
-
-	std::string db_name = "par_db" + std::to_string(db_index);
-	par_handle db_handle = par_get_db(db_name);
 	const char *error_msg = nullptr;
+	par_get(db_handle, &key, &schema_value, &error_msg);
 
-	par_get(db_handle, &key, &value, &error_msg);
 	if (error_msg) {
-		free(value.val_buffer);
 		throw eckit::Exception(std::string("Failed to retrieve schema: ") + error_msg);
 	}
 
-	std::string schemaContent(value.val_buffer, value.val_size);
-	free(value.val_buffer);
-
+	std::string schemaContent(schema_value.val_buffer, schema_value.val_size);
 	std::istringstream stream(schemaContent);
 	schema_.load(stream);
 }

@@ -37,8 +37,9 @@ void ParallaxIndex::updateAxes()
 	std::string db_name;
 
 	std::string keyStr = "axes";
+	std::string fullKey = "id" + std::to_string(prefix) + "_" + keyStr;
 	struct par_key axes_key {
-		.size = static_cast<uint32_t>(keyStr.size()), .data = keyStr.c_str()
+		.size = static_cast<uint32_t>(fullKey.size()), .data = fullKey.c_str()
 	};
 
 	std::vector<char> axes_data(512);
@@ -67,8 +68,8 @@ void ParallaxIndex::updateAxes()
 
 	for (const auto &name : axis_names) {
 		std::string axisKeyStr = name;
-		struct par_key axis_key = { .size = static_cast<uint32_t>(axisKeyStr.size()),
-					    .data = axisKeyStr.c_str() };
+		std::string fullKey = "id" + std::to_string(prefix) + "_" + axisKeyStr;
+		struct par_key axis_key = { .size = static_cast<uint32_t>(fullKey.size()), .data = fullKey.c_str() };
 
 		struct par_value axis_value = { .val_buffer_size = static_cast<uint32_t>(axis_values_buf.size()),
 						.val_size = 0,
@@ -102,15 +103,16 @@ bool ParallaxIndex::get(const Key &key, const Key &remapKey, Field &field) const
 	std::vector<char> loc_data(field_loc_max_len);
 
 	struct par_key pkey;
-	pkey.size = query.size() + 1;
-	pkey.data = query.c_str();
+	std::string fullKey = "id" + std::to_string(prefix) + "_" + query;
+	pkey.size = fullKey.size() + 1;
+	pkey.data = fullKey.c_str();
 
 	struct par_value value;
 	value.val_buffer = loc_data.data();
 	value.val_buffer_size = field_loc_max_len;
 	value.val_size = 0;
 
-	size_t hash = std::hash<std::string>{}(query);
+	size_t hash = std::hash<std::string>{}(fullKey);
 	int db_index = hash % PARALLAX_DB_COUNT;
 
 	std::string db_name = "par_db" + std::to_string(db_index);
@@ -155,6 +157,11 @@ void ParallaxIndex::add(const Key &key, const Field &field)
 	}
 
 	std::string keyStr = key.valuesToString();
+	std::string fullKey = "id" + std::to_string(prefix) + "_" + keyStr;
+
+	const char *data_ptr = reinterpret_cast<const char *>(h.data());
+	std::vector<char> payload(data_ptr, data_ptr + hs.bytesWritten());
+
 	struct par_value valueData;
 	valueData.val_size = hs.bytesWritten();
 	valueData.val_buffer_size = h.size();
@@ -163,11 +170,12 @@ void ParallaxIndex::add(const Key &key, const Field &field)
 		throw eckit::Exception("Memory allocation failed for Parallax index storage");
 	}
 	struct par_key_value kv;
-	kv.k.size = keyStr.size() + 1;
-	kv.k.data = keyStr.c_str();
+
+	kv.k.size = fullKey.size() + 1;
+	kv.k.data = fullKey.c_str();
 	kv.v = valueData;
 
-	size_t hash = std::hash<std::string>{}(keyStr);
+	size_t hash = std::hash<std::string>{}(fullKey);
 	int db_index = hash % PARALLAX_DB_COUNT;
 
 	std::string db_name = "par_db" + std::to_string(db_index);
@@ -178,7 +186,7 @@ void ParallaxIndex::add(const Key &key, const Field &field)
 		throw eckit::Exception("Failed to get Parallax database handle.");
 	}
 
-	par_put(db_handle, &kv, &error_msg);
+	par_async_put(db_handle, &kv, &error_msg);
 
 	if (error_msg != nullptr) {
 		throw eckit::Exception(std::string("Parallax index insertion failed: ") + error_msg);

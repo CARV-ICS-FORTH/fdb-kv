@@ -15,6 +15,26 @@ namespace fdb5
 ParallaxCatalogueReader::ParallaxCatalogueReader(const Key &key, const fdb5::Config &config)
 	: ParallaxCatalogue(key, config)
 {
+	par_handle db_handle = par_get_db("par_db0");
+
+	std::string dataset_name = this->key().valuesToString();
+
+	struct par_key lookup_key = { .size = (uint32_t)(dataset_name.size() + 1), .data = dataset_name.c_str() };
+	struct par_value lookup_val = {};
+	lookup_val.val_buffer_size = 64;
+	lookup_val.val_buffer = new char[lookup_val.val_buffer_size];
+
+	const char *error_msg = NULL;
+	par_get(db_handle, &lookup_key, &lookup_val, &error_msg);
+
+	if (error_msg == NULL && lookup_val.val_size > 0) {
+		prefix = std::stoi(lookup_val.val_buffer);
+	} else {
+		delete[] lookup_val.val_buffer;
+		throw eckit::UserError("Dataset not found in Parallax: " + dataset_name);
+	}
+
+	delete[] lookup_val.val_buffer;
 }
 
 ParallaxCatalogueReader::ParallaxCatalogueReader(const eckit::URI &uri, const fdb5::Config &config)
@@ -35,8 +55,9 @@ bool ParallaxCatalogueReader::selectIndex(const Key &key)
 
 		std::string keyStr = key.valuesToString();
 		struct par_key keyData;
-		keyData.size = keyStr.size() + 1;
-		keyData.data = keyStr.c_str();
+		std::string fullKey = "id" + std::to_string(prefix) + "_" + keyStr;
+		keyData.size = fullKey.size() + 1;
+		keyData.data = fullKey.c_str();
 
 		std::vector<char> buffer(32168U);
 		struct par_value valueData = { .val_buffer_size = static_cast<uint32_t>(buffer.size()),

@@ -24,12 +24,12 @@ uint64_t ParallaxArray::read(void *buffer, uint64_t length, const eckit::Offset 
 	std::string key = key_;
 	par_key.size = key.length() + 1;
 	par_key.data = key.c_str();
-
-	std::vector<char> temp_buffer(VALUE_BUFFER_SIZE);
-
-	struct par_value par_value = { .val_buffer_size = VALUE_BUFFER_SIZE,
+	
+	struct par_value par_value = { .val_buffer_size = static_cast<uint32_t>(length),
 				       .val_size = 0,
-				       .val_buffer = temp_buffer.data() };
+				       .val_buffer = static_cast<char *>(buffer) };
+
+	struct par_blob_req blob_req = { .offset = static_cast<uint64_t>(offset), .size = length };
 
 	size_t hash = std::hash<std::string>{}(key.c_str());
 	int db_index = hash % PARALLAX_DB_COUNT;
@@ -40,27 +40,14 @@ uint64_t ParallaxArray::read(void *buffer, uint64_t length, const eckit::Offset 
 	const char *error_msg = NULL;
 
 	// par_get(db_handle, &par_key, &par_value, &error_msg);
-	read_blob(db_handle, &par_key, &par_value, &error_msg);
+	read_blob(db_handle, &par_key, &par_value, &blob_req, &error_msg);
+
 	if (error_msg) {
 		std::cerr << "Parallax get failed reason: " << error_msg << std::endl;
 		return 0;
 	}
 
-	uint64_t start_offset = static_cast<uint64_t>(offset);
-	uint64_t object_size = par_value.val_size;
-
-	if (start_offset >= object_size) {
-		return 0;
-	}
-
-	uint64_t bytes_to_copy = length;
-	if (start_offset + bytes_to_copy > object_size) {
-		bytes_to_copy = object_size - start_offset;
-	}
-
-	memcpy(buffer, temp_buffer.data() + start_offset, bytes_to_copy);
-
-	return bytes_to_copy;
+	return par_value.val_size;
 }
 
 void ParallaxArray::open()

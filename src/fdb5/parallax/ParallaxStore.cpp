@@ -24,15 +24,7 @@ eckit::DataHandle *ParallaxStore::retrieve(Field &field) const
 
 std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void *data, eckit::Length length)
 {
-	static std::atomic<uint64_t> archive_counter{ 0 };
-
-	static std::string unique_prefix = []() {
-		char hostname[HOST_NAME_MAX];
-		gethostname(hostname, HOST_NAME_MAX);
-		return std::string(hostname) + "_" + std::to_string(getpid()) + "_";
-	}();
-
-	std::string internalKey = key.valuesToString() + "_" + unique_prefix + std::to_string(archive_counter.fetch_add(1));
+	std::string internalKey = "id" + std::to_string(prefix) + "_" + key.valuesToString();
 
 	size_t hash = std::hash<std::string>{}(internalKey);
 	int db_index = hash % PARALLAX_DB_COUNT;
@@ -49,8 +41,10 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 	kv.v.val_buffer = const_cast<char *>(reinterpret_cast<const char *>(data));
 	kv.v.val_size = length;
 
+	uint64_t blob_offset = 0;
+
 	// par_put(db_handle, &kv, &error_msg);
-	write_blob(db_handle,&kv, &error_msg);
+	write_blob(db_handle, &kv, &error_msg, &blob_offset);
 
 	if (error_msg) {
 		std::cerr << "Parallax put failed: " << error_msg << std::endl;
@@ -58,7 +52,8 @@ std::unique_ptr<FieldLocation> ParallaxStore::archive(const Key &key, const void
 	}
 
 	eckit::URI uri("parallax", kv.k.data);
-	return std::make_unique<ParallaxFieldLocation>(uri, 0, length, Key(nullptr, true));
+
+	return std::make_unique<ParallaxFieldLocation>(uri, blob_offset, length, Key(nullptr, true));
 }
 
 void ParallaxStore::print(std::ostream &out) const

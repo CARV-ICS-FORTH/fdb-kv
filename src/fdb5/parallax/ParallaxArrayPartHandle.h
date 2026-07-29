@@ -39,6 +39,7 @@ class ParallaxArrayPartHandle : public eckit::DataHandle {
 	bool open_;
 	eckit::Offset offset_;
 	eckit::Length len_;
+	long local_pos_;
 };
 
 }

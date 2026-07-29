@@ -18,6 +18,7 @@ ParallaxArrayPartHandle::ParallaxArrayPartHandle(const fdb5::ParallaxArrayName &
 	, open_(false)
 	, offset_(off)
 	, len_(len)
+	, local_pos_(0)
 {
 }
 
@@ -45,12 +46,22 @@ Length ParallaxArrayPartHandle::openForRead()
 long ParallaxArrayPartHandle::read(void *buf, long len)
 {
 	ASSERT(open_);
-	eckit::Length s = size();
-	if (len > s - offset_)
-		len = s - offset_;
-	long read = arr_->read(buf, len, offset_);
-	offset_ += read;
-	return read;
+	long bytes_left = static_cast<long>(static_cast<long long>(len_) - local_pos_);
+
+	if (len > bytes_left) {
+		len = bytes_left;
+	}
+
+	if (len <= 0) {
+		return 0;
+	}
+
+	long read_bytes = arr_->read(buf, len, offset_);
+
+	offset_ += read_bytes;
+	local_pos_ += read_bytes;
+
+	return read_bytes;
 }
 
 void ParallaxArrayPartHandle::close()

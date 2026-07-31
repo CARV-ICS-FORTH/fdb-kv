@@ -61,6 +61,28 @@ void ParallaxStore::print(std::ostream &out) const
 	out << "ParallaxStore";
 }
 
+void ParallaxStore::flush()
+{
+	std::string db_name = "par_db0";
+	par_handle db_handle = par_get_db(db_name);
+
+	struct par_key_value kv;
+	kv.k.data = "";
+	kv.k.size = 0;
+
+	kv.v.val_buffer = nullptr;
+	kv.v.val_size = 0;
+
+	const char *error_msg = nullptr;
+	uint64_t dummy_offset = 0;
+
+	write_blob(db_handle, &kv, &error_msg, &dummy_offset);
+
+	if (error_msg) {
+		std::cerr << "Parallax flush failed on " << db_name << ": " << error_msg << std::endl;
+	}
+}
+
 static StoreBuilder<ParallaxStore> builder("parallax");
 
 }

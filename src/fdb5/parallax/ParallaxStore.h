@@ -49,10 +49,6 @@ class ParallaxStore : public Store {
 		return true;
 	}
 
-	void flush() override
-	{
-	}
-
 	void close() override
 	{
 	}
@@ -80,6 +76,7 @@ class ParallaxStore : public Store {
 	eckit::DataHandle *retrieve(Field &field) const override;
 	std::unique_ptr<FieldLocation> archive(const Key &key, const void *data, eckit::Length length) override;
 	void print(std::ostream &out) const override;
+	void flush();
 };
 
 }

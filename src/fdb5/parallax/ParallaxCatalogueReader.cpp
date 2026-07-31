@@ -12,29 +12,22 @@
 
 namespace fdb5
 {
+
+inline uint32_t hash_dataset_name(const std::string &name)
+{
+	uint32_t hash = 2166136261u;
+	for (char c : name) {
+		hash ^= static_cast<uint8_t>(c);
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
 ParallaxCatalogueReader::ParallaxCatalogueReader(const Key &key, const fdb5::Config &config)
 	: ParallaxCatalogue(key, config)
 {
-	par_handle db_handle = par_get_db("par_db0");
-
 	std::string dataset_name = this->key().valuesToString();
-
-	struct par_key lookup_key = { .size = (uint32_t)(dataset_name.size() + 1), .data = dataset_name.c_str() };
-	struct par_value lookup_val = {};
-	lookup_val.val_buffer_size = 64;
-	lookup_val.val_buffer = new char[lookup_val.val_buffer_size];
-
-	const char *error_msg = NULL;
-	par_get(db_handle, &lookup_key, &lookup_val, &error_msg);
-
-	if (error_msg == NULL && lookup_val.val_size > 0) {
-		prefix = std::stoi(lookup_val.val_buffer);
-	} else {
-		delete[] lookup_val.val_buffer;
-		throw eckit::UserError("Dataset not found in Parallax: " + dataset_name);
-	}
-
-	delete[] lookup_val.val_buffer;
+	prefix = hash_dataset_name(dataset_name);
 }
 
 ParallaxCatalogueReader::ParallaxCatalogueReader(const eckit::URI &uri, const fdb5::Config &config)

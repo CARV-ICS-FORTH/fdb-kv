@@ -12,6 +12,17 @@
 
 namespace fdb5
 {
+
+inline uint32_t hash_dataset_name(const std::string &name)
+{
+	uint32_t hash = 2166136261u;
+	for (char c : name) {
+		hash ^= static_cast<uint8_t>(c);
+		hash *= 16777619u;
+	}
+	return hash;
+}
+
 ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Config &config)
 	: ParallaxCatalogue(key, config)
 	, firstIndexWrite_(true)
@@ -19,7 +30,7 @@ ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Con
 	par_handle db_handle = par_get_db("par_db0");
 	std::string dataset_name = this->key().valuesToString();
 
-	prefix = par_generate_unique_id(db_handle);
+	prefix = hash_dataset_name(dataset_name);
 	std::string prefix_str = std::to_string(prefix);
 
 	std::string path = config.schemaPath();

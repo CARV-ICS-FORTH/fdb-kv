@@ -8,6 +8,8 @@
  * does it submit to any jurisdiction.
  */
 
+#include <optional>
+
 #include "fdb5/parallax/ParallaxNameBase.h"
 
 using eckit::Length;

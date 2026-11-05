@@ -15,7 +15,7 @@ namespace fdb5
 {
 class ParallaxCatalogue : public Catalogue {
     public:
-	ParallaxCatalogue(const Key &key, const fdb5::Config &config);
+	ParallaxCatalogue(const Key &key, const fdb5::Config &config, bool writer = false);
 
 	ParallaxCatalogue(const eckit::URI &uri, const ControlIdentifiers &controlIdentifiers,
 			  const fdb5::Config &config);

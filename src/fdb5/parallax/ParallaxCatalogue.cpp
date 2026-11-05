@@ -9,12 +9,19 @@
  */
 
 #include "ParallaxCatalogue.h"
+#include "fdb5/parallax/ParallaxPlacement.h"
 
 namespace fdb5
 {
-ParallaxCatalogue::ParallaxCatalogue(const Key &key, const fdb5::Config &config)
+ParallaxCatalogue::ParallaxCatalogue(const Key &key, const fdb5::Config &config, bool writer)
 	: Catalogue(key, ControlIdentifiers(), config)
 {
+	// Decide which server this dataset lives on BEFORE any DB handle is opened (no-op unless
+	// FDB_PARALLAX_PLACEMENT is compiled in and FDB_PARALLAX_PLACEMENT_FILE is set).
+	if (writer)
+		parallax_placement_assign(this->key().valuesToString());
+	else
+		parallax_placement_lookup(this->key().valuesToString());
 	par_init_db_handles();
 }
 

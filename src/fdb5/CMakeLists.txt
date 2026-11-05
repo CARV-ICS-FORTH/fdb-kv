@@ -426,6 +426,11 @@ else()
 endif()
 
 
+option( FDB_PARALLAX_PLACEMENT "Shared-file load-balanced server placement for the Parallax backend (needs FDB_PARALLAX_PLACEMENT_FILE at run time)" OFF )
+if( HAVE_PARALLAXFDB AND FDB_PARALLAX_PLACEMENT )
+    add_compile_definitions( FDB_PARALLAX_PLACEMENT )
+endif()
+
 if( HAVE_PARALLAXFDB )
     list( APPEND fdb5_srcs
         parallax/parallax_handle.cpp
@@ -447,6 +452,8 @@ if( HAVE_PARALLAXFDB )
         parallax/ParallaxNameBase.h
         parallax/ParallaxArray.cpp
         parallax/ParallaxArray.h
+        parallax/ParallaxPlacement.cpp
+        parallax/ParallaxPlacement.h
         parallax/ParallaxArrayPartHandle.cpp
         parallax/ParallaxArrayPartHandle.h
     )

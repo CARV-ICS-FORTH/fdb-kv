@@ -24,7 +24,7 @@ inline uint32_t hash_dataset_name(const std::string &name)
 }
 
 ParallaxCatalogueWriter::ParallaxCatalogueWriter(const Key &key, const fdb5::Config &config)
-	: ParallaxCatalogue(key, config)
+	: ParallaxCatalogue(key, config, true)
 	, firstIndexWrite_(true)
 {
 	par_handle db_handle = par_get_db("par_db0");

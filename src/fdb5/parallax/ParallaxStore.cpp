@@ -10,6 +10,8 @@
 
 #include "ParallaxStore.h"
 
+#include <cstdlib>
+
 namespace fdb5
 {
 ParallaxStore::ParallaxStore(const Schema &schema, const Key &key, const Config &config)
@@ -63,6 +65,12 @@ void ParallaxStore::print(std::ostream &out) const
 
 void ParallaxStore::flush()
 {
+	// FDB_PARALLAX_SKIP_SYNC (any value): make flush() a no-op. By default flush() sends a zero-length PUT_BLOB,
+	// which makes the Parallax server fdatasync() the dataset file. Used to measure the cost of that sync.
+	static const bool skipSync = (::getenv("FDB_PARALLAX_SKIP_SYNC") != nullptr);
+	if (skipSync)
+		return;
+
 	std::string db_name = "par_db0";
 	par_handle db_handle = par_get_db(db_name);
 

@@ -9,6 +9,10 @@
  */
 
 #include <sys/time.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <cstdlib>
+#include <cstdio>
 #include <iomanip>
 #include <unordered_set>
 #include <memory>
@@ -33,8 +37,35 @@
 // This list is currently sufficient to get to nparams=200 of levtype=ml,type=fc
 const std::unordered_set<size_t> AWKWARD_PARAMS {11, 12, 13, 14, 15, 16, 49, 51, 52, 61, 121, 122, 146, 147, 169, 175, 176, 177, 179, 189, 201, 202};
 
-
 using namespace eckit;
+
+// Optional start barrier for benchmarking (disabled unless FDB_HAMMER_BARRIER_DIR is set).
+// Each process touches <dir>/<host>.<pid> and waits until FDB_HAMMER_BARRIER_N files exist, so all
+// processes enter the measured (steady) phase together. The directory must exist and be shared.
+static bool barrierEnabled() {
+    const char* d = getenv("FDB_HAMMER_BARRIER_DIR");
+    return d && *d && getenv("FDB_HAMMER_BARRIER_N");
+}
+
+static void barrierWait() {
+    const std::string dir = getenv("FDB_HAMMER_BARRIER_DIR");
+    const long n = atol(getenv("FDB_HAMMER_BARRIER_N"));
+    char host[256] = "host";
+    gethostname(host, sizeof(host) - 1);
+    const std::string mine = dir + "/" + host + "." + std::to_string(getpid());
+    FILE* f = fopen(mine.c_str(), "w");
+    if (f) fclose(f);
+    for (int i = 0; i < 60000; ++i) {  // up to 10 minutes
+        long count = 0;
+        if (DIR* dp = opendir(dir.c_str())) {
+            while (dirent* e = readdir(dp)) { if (e->d_name[0] != '.') ++count; }
+            closedir(dp);
+        }
+        if (count >= n) return;
+        usleep(10000);
+    }
+    Log::info() << "Barrier timed out" << std::endl;
+}
 
 
 class FDBHammer : public fdb5::FDBTool {
@@ -137,7 +168,8 @@ void FDBHammer::executeWrite(const eckit::option::CmdArgs &args) {
     size = cls.length();
     CODES_CHECK(codes_set_string(handle, "class", cls.c_str(), &size), 0);
 
-    struct timeval tval_before_io, tval_after_io;
+    struct timeval tval_before_io, tval_after_io, tval_steady = {0, 0};
+    size_t bytesBeforeSteady = 0;
     eckit::Timer timer;
     eckit::Timer gribTimer;
     double elapsed_grib = 0;
@@ -178,6 +210,13 @@ void FDBHammer::executeWrite(const eckit::option::CmdArgs &args) {
                     archiver.archive(dh);
                     writeCount++;
                     bytesWritten += size;
+                    if (writeCount == 1 && barrierEnabled()) {
+                        // first message done: connections/DBs are open. Flush it, wait for everybody, start the steady phase.
+                        archiver.flush();
+                        barrierWait();
+                        gettimeofday(&tval_steady, NULL);
+                        bytesBeforeSteady = bytesWritten;
+                    }
 
                     gribTimer.start();
                 }
@@ -214,6 +253,13 @@ void FDBHammer::executeWrite(const eckit::option::CmdArgs &args) {
                     (long int)tval_after_io.tv_sec << "." <<
                     std::setw(6) << std::setfill('0') <<
                     (long int)tval_after_io.tv_usec << std::endl;
+    if (tval_steady.tv_sec) {
+        Log::info() << "Steady bytes written: " << (bytesWritten - bytesBeforeSteady) << std::endl;
+        Log::info() << "Timestamp steady start: " <<
+                        (long int)tval_steady.tv_sec << "." <<
+                        std::setw(6) << std::setfill('0') <<
+                        (long int)tval_steady.tv_usec << std::endl;
+    }
 
 }
 
@@ -241,7 +287,7 @@ void FDBHammer::executeRead(const eckit::option::CmdArgs &args) {
     eckit::LocalConfiguration userConfig{};
     if (!args.has("disable-subtocs")) userConfig.set("useSubToc", true);
 
-    struct timeval tval_before_io, tval_after_io;
+    struct timeval tval_before_io, tval_after_io, tval_steady = {0, 0};
     eckit::Timer timer;
     timer.start();
 
@@ -272,6 +318,11 @@ void FDBHammer::executeRead(const eckit::option::CmdArgs &args) {
                     if (member == 1 && step == 0 && lev == 1 && param == 1) gettimeofday(&tval_before_io, NULL);
                     handles.add(fdb.retrieve(request));
                     fieldsRead++;
+                    if (fieldsRead == 1 && barrierEnabled()) {
+                        // first lookup done (DB opened): wait for everybody, then the steady phase starts
+                        barrierWait();
+                        gettimeofday(&tval_steady, NULL);
+                    }
                 }
             }
         }
@@ -299,6 +350,12 @@ void FDBHammer::executeRead(const eckit::option::CmdArgs &args) {
                     (long int)tval_after_io.tv_sec << "." <<
                     std::setw(6) << std::setfill('0') <<
                     (long int)tval_after_io.tv_usec << std::endl;
+    if (tval_steady.tv_sec) {
+        Log::info() << "Timestamp steady start: " <<
+                        (long int)tval_steady.tv_sec << "." <<
+                        std::setw(6) << std::setfill('0') <<
+                        (long int)tval_steady.tv_usec << std::endl;
+    }
 
 }
 
